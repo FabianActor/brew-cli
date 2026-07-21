@@ -87,7 +87,7 @@ export async function updateBean(
     }
   }
 
-  const merged: Record<string, unknown> = { ...row.data, ...updates };
+  const merged: Record<string, unknown> = { ...row.data, ...updates, id: beanId };
 
   if (Object.keys(blendPatch).length > 0) {
     const existing = Array.isArray(row.data.blendComponents) ? row.data.blendComponents : [];
@@ -126,7 +126,7 @@ export async function consumeBean(
   const row = await fetchRecordById(supabase, TABLE, beanId, userId);
   if (!row) return null;
 
-  const bean = row.data;
+  const bean: Record<string, unknown> = { ...row.data, id: beanId };
   const remaining = parseGrams(bean.remaining);
   const newRemaining = Math.max(0, remaining - amountGrams);
   bean.remaining = `${newRemaining}`;

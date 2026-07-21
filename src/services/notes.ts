@@ -86,6 +86,7 @@ export async function updateNote(
   const merged: Record<string, unknown> = {
     ...row.data,
     ...updates,
+    id: noteId,
     updatedAt: new Date().toISOString(),
   };
   if (mergedTaste !== undefined) merged.taste = mergedTaste;
