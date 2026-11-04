@@ -23,6 +23,7 @@
 - **`--in-transit` / `--is-frozen`**（`bean add`、`bean update`）：新建豆默认「已到手」，在途和冷冻都能直接标，取消用 `--no-in-transit` / `--no-frozen`。两个是互斥状态，开一个自动关掉另一个，同时给会报错。
 - **生豆**：`--bean-state green` + `--purchase-date`。生豆记购买日期（不给就填今天），没有烘焙日期、没有赏味期；`--bean-state green` 与 `--roast-date` 冲突会直接报错。`bean update <id> --bean-state roasted` 转回熟豆。
 - **`note add --bean-id` 自动写 `coffeeBeanInfo`**：存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 点「记录一杯」的行为一致；以后豆子改名，旧记录仍显示当时的样子。
+- **赏味期跟随 App 里的用户设置**：`--start-day` / `--end-day` 不给时，先读 `user_settings` 里的烘焙商配置和全局自定义，再落到兜底预设（浅 7/60、中 10/60、深 14/90）。旧行为是永远只用兜底预设 —— 你在 App 里给某个烘焙商调过「浅烘 20 天」，CLI 建的豆子不认。
 
 ### 修复
 
@@ -33,7 +34,6 @@
 ### 计划中
 
 - `note add` 的 `methodId`（库里的记录 0 条用到，暂不做）
-- 赏味期跟随用户的 `appSettings.customFlavorPeriod` / `roasterConfigs`（现在只用 App 的兜底预设）
 
 ## [0.2.2] - 2026-11-04
 

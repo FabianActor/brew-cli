@@ -30,7 +30,7 @@
 - `flavor`
 - `notes`
 
-> `startDay / endDay` 用 `--start-day` / `--end-day` 传。不传时按烘焙度取 App 的同一套预设：浅烘 `7 / 60`、中烘 `10 / 60`、深烘 `14 / 90`；烘焙度也没给时按中烘 `10 / 60`。
+> `startDay / endDay` 用 `--start-day` / `--end-day` 传。不传时读 App 里的赏味期设置，优先级与 App 一致：**该烘焙商的配置 → 全局自定义 → 兜底预设**（预设：浅烘 `7 / 60`、中烘 `10 / 60`、深烘 `14 / 90`；烘焙度也没给时按中烘）。
 >
 > `--roast-level` 接受缩写（`浅度` → `浅度烘焙`）；不是 App 的标准值时只警告、照写，但 `bean list --roast-level` 是精确匹配，这颗豆可能筛不出来。**不给就不填**——CLI 不会按豆种猜烘焙度。
 
@@ -106,7 +106,7 @@ brew-guide roasters --format json
 
 - `beanType` 没给时，默认按 `filter`
 - `roastLevel` **不给就留空**，不按豆种猜（App 里烘焙度空着是正常状态，猜错会污染筛选）
-- `startDay / endDay` 不给时按烘焙度取 App 的同一套预设（`flavorPeriodUtils.ts:27-31`）：浅烘 7/60、中烘 10/60、深烘 14/90，烘焙度为空按中烘；要改就用 `--start-day` / `--end-day`
+- `startDay / endDay` 不给时读 App 的赏味期设置（`user_settings.data.appSettings`），优先级同 App（`flavorPeriodUtils.ts:100-140`）：**烘焙商配置 `roasterConfigs[].flavorPeriod` → 全局 `customFlavorPeriod` → 兜底预设**（浅 7/60、中 10/60、深 14/90，烘焙度为空按中烘），每档每个字段各自回落；要改就用 `--start-day` / `--end-day`（给了这两个就不再读设置）。读不到设置时回落预设，并在非 dry-run 下打一行 warning
 - `isInTransit` / `isFrozen` 默认都是 `false`（=已到手、没冷冻）
 - `beanState` 默认 `roasted`；`green`（生豆）要显式传
 - `price` 只收数字（最多两位小数），存字符串
