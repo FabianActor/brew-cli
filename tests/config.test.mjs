@@ -55,8 +55,8 @@ test('resolveConfig prefers environment variables over config file values', asyn
   });
 });
 
-test('resolveConfig reads credentials from cwd .env when process env is unset', async (t) => {
-  await withSandbox(t, async ({ workDir }) => {
+test('resolveConfig 不读当前目录的 .env（防止在别的项目目录里跑时连错库）', async (t) => {
+  await withSandbox(t, async ({ workDir, configPath }) => {
     await fs.writeFile(
       path.join(workDir, '.env'),
       [
@@ -66,6 +66,15 @@ test('resolveConfig reads credentials from cwd .env when process env is unset', 
       ].join('\n'),
       'utf8',
     );
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://from-config-file.supabase.co',
+        supabaseKey: 'file-key',
+        brewGuideUserId: 'file-user',
+      }),
+      'utf8',
+    );
 
     delete process.env.BREW_GUIDE_SUPABASE_URL;
     delete process.env.BREW_GUIDE_SUPABASE_KEY;
@@ -73,9 +82,10 @@ test('resolveConfig reads credentials from cwd .env when process env is unset', 
 
     const config = await resolveConfig();
 
-    assert.equal(config.supabaseUrl, 'https://dotenv.supabase.co');
-    assert.equal(config.supabaseKey, 'dotenv-key');
-    assert.equal(config.brewGuideUserId, 'dotenv-user');
+    // .env 里那三个值必须被忽略，生效的是配置文件。
+    assert.equal(config.supabaseUrl, 'https://from-config-file.supabase.co');
+    assert.equal(config.supabaseKey, 'file-key');
+    assert.equal(config.brewGuideUserId, 'file-user');
   });
 });
 

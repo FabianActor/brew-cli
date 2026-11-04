@@ -150,6 +150,21 @@ export default defineCommand({
         exitWithError(`Error: bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`, EXIT.USAGE);
       }
 
+      // App 的冲煮记录里存了一份豆子快照（page.tsx:211-216）：之后豆子改名或改烘焙度，
+      // 旧记录仍然显示当时的样子。以前 CLI 不写这段，App 里只能靠 beanId 反查。
+      const beanFields = (bean.data ?? {}) as Record<string, unknown>;
+      noteData.coffeeBeanInfo = {
+        name: typeof beanFields.name === 'string' ? beanFields.name : '',
+        roastLevel:
+          typeof beanFields.roastLevel === 'string' && beanFields.roastLevel
+            ? beanFields.roastLevel
+            : '中度烘焙',
+        roastDate: typeof beanFields.roastDate === 'string' ? beanFields.roastDate : '',
+        ...(typeof beanFields.roaster === 'string' && beanFields.roaster
+          ? { roaster: beanFields.roaster }
+          : {}),
+      };
+
       // equipment 同样是软引用：内置器具在 buildNoteData 里已经认过并写好 equipmentId，
       // 这里只处理自定义器具 —— 查不到就报错，免得记录指不上任何器具。
       const equipmentInput =

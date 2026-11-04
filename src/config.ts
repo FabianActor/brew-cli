@@ -28,7 +28,10 @@ export async function resolveConfig(): Promise<BrewGuideConfig> {
   const { config, configFile } = await loadConfig<BrewGuideConfig & LegacyConfigShape>({
     configFile: configPath,
     rcFile: false,
-    dotenv: true,
+    // 不读当前目录的 .env：CLI 会在任意目录里被调用，那边恰好有一份带着
+    // SUPABASE_URL / BREW_GUIDE_* 的 .env 时，会悄悄改掉这里连的库。
+    // 环境变量仍然生效——但只认 shell 里真正导出的那些。
+    dotenv: false,
     defaults: {
       brewGuideUserId: 'default_user',
     } as BrewGuideConfig,

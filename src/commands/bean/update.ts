@@ -10,6 +10,13 @@ import {
 } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { warn } from '../../lib/output.ts';
+import {
+  parseBeanState,
+  parseDateOnly,
+  parsePrice,
+  resolveTransitFlags,
+  todayLocalDate,
+} from '../../lib/beanInput.ts';
 import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { updateBean } from '../../services/beans.ts';
@@ -21,7 +28,7 @@ id: { type: 'positional', required: true, description: 'Bean record ID.' },
   'roast-level': { type: 'string', description: 'Roast level.' },
   capacity: { type: 'string', description: 'Total capacity.' },
   remaining: { type: 'string', description: 'Remaining amount.' },
-  price: { type: 'string', description: 'Price.' },
+  price: { type: 'string', description: '整包价格（元），只收数字，如 88 或 88.5。' },
   notes: { type: 'string', description: 'Notes.' },
   origin: { type: 'string', description: '产地（写进 blendComponents[--component-index]，编号从 1 开始）。' },
   process: { type: 'string', description: '处理法。' },
@@ -40,6 +47,10 @@ id: { type: 'positional', required: true, description: 'Bean record ID.' },
       '整组替换成分，可重复：--component "origin=秘鲁;percentage=33" --component "origin=巴西;percentage=67"。',
   },
   'roast-date': { type: 'string', description: 'Roast date (YYYY-MM-DD).' },
+  'bean-state': { type: 'string', description: 'roasted / green。转成生豆会清掉烘焙日期与赏味期，并把 --purchase-date 补成今天。' },
+  'purchase-date': { type: 'string', description: '购买日期 YYYY-MM-DD（生豆）。' },
+  'in-transit': { type: 'boolean', description: '标记为在途（--no-in-transit 取消）。与 --is-frozen 互斥。' },
+  'is-frozen': { type: 'boolean', description: '标记为冷冻保存（--no-frozen 取消）。与 --in-transit 互斥。' },
   'start-day': { type: 'string', description: 'Optimal start day after roast.' },
   'end-day': { type: 'string', description: 'Optimal end day after roast.' },
   'bean-type': { type: 'string', description: '豆种：filter / espresso / omni。' },
@@ -89,9 +100,39 @@ export default defineCommand({
     const remaining = nonEmptyString(normalizeWeight(args.remaining), '--remaining', '用 120 或 120g');
     if (remaining !== undefined) updates.remaining = remaining;
     const price = nonEmptyString(args.price, '--price');
-    if (price !== undefined) updates.price = price;
+    if (price !== undefined) updates.price = parsePrice(price);
     // notes 允许显式清空：--notes "" 视为"清掉备注"，这是唯一合法的空值。
     if (typeof args.notes === 'string') updates.notes = args.notes;
+
+    // 在途 / 冷冻：App 的显示状态，互斥。--no-in-transit / --no-frozen 取消。
+    Object.assign(updates, resolveTransitFlags(args['in-transit'], args['is-frozen']));
+
+    // 生豆 / 熟豆：roasted ↔ green 是两套日期语义（BasicInfoSection.tsx:92-106）。
+    const beanStateArg = nonEmptyString(args['bean-state'], '--bean-state');
+    const purchaseDateArg = nonEmptyString(args['purchase-date'], '--purchase-date');
+    if (beanStateArg !== undefined) {
+      const beanState = parseBeanState(beanStateArg);
+      updates.beanState = beanState;
+      if (beanState === 'green') {
+        if (typeof args['roast-date'] === 'string' && args['roast-date']) {
+          exitWithError(
+            'Error: 生豆没有烘焙日期（--bean-state green 与 --roast-date 冲突）。',
+            EXIT.USAGE,
+          );
+        }
+        // 生豆只看购买日期；赏味期两个值清零（App 把非正数当未设置）。
+        updates.purchaseDate = purchaseDateArg
+          ? parseDateOnly(purchaseDateArg, '--purchase-date')
+          : todayLocalDate();
+        updates.roastDate = '';
+        updates.startDay = 0;
+        updates.endDay = 0;
+      } else if (!(typeof args['roast-date'] === 'string' && args['roast-date'])) {
+        warn('Warning: 转成熟豆但没给 --roast-date，App 里这颗豆的赏味期会显示「未设置烘焙日期」。');
+      }
+    } else if (purchaseDateArg !== undefined) {
+      updates.purchaseDate = parseDateOnly(purchaseDateArg, '--purchase-date');
+    }
     const componentSpecs = Array.isArray(args.component)
       ? args.component
       : typeof args.component === 'string' && args.component
@@ -114,11 +155,11 @@ export default defineCommand({
       exitWithError('Error: --component-index 要配合成分字段（--origin / --region / --altitude …）使用。', EXIT.USAGE);
     }
     if (typeof args['roast-date'] === 'string' && args['roast-date']) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(args['roast-date'])) {
-        exitWithError('Error: --roast-date must be YYYY-MM-DD.', EXIT.USAGE);
+      updates.roastDate = parseDateOnly(args['roast-date'], '--roast-date');
+      // 给了烘焙日期通常意味着豆子已经到手；但如果用户显式说了「还在途」，就不覆盖他的判断。
+      if (typeof args['in-transit'] !== 'boolean' && typeof args['is-frozen'] !== 'boolean') {
+        updates.isInTransit = false;
       }
-      updates.roastDate = args['roast-date'];
-      updates.isInTransit = false;
     }
     if (typeof args['start-day'] === 'string' && args['start-day']) {
       const n = Number(args['start-day']);
