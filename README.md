@@ -215,8 +215,8 @@ npm link                      # 改完只想本地用：build 一次就生效
 
 改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
 
-> 目前这个仓库只供本地使用（`npm link`），暂不发布到 npm。`.github/workflows/publish.yml` 仍在，推 `v*` tag 会触发发布——真要发之前先把包名和发布范围理清。
+> 目前这个仓库只供本地使用（`npm link`），暂不发布到 npm。`publish.yml` 已删除，真要发布时再补一段发版流程。
 
 ## License
 
-MIT
+MIT。本仓库是 [swiftwind0405/brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli) 的 fork，现由 FabianActor 维护；上游部分的版权归原作者，改动部分的版权与责任归本仓库维护者。具体改了哪些见 `git log`。
