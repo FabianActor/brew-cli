@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
-import { nonEmptyString } from '../../lib/args.ts';
+import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { updateNote } from '../../services/notes.ts';
 
@@ -19,34 +19,37 @@ function parseScore(value: unknown, flag: string): number | undefined {
   return parsed;
 }
 
+const argsDef = {
+  id: { type: 'positional', required: true, description: 'Note record ID.' },
+  rating: { type: 'string', description: 'Rating 0-5 (accepts decimals like 3.5).' },
+  method: { type: 'string', description: 'Method name.' },
+  memo: { type: 'string', description: 'Tasting notes.' },
+  notes: { type: 'string', description: 'Free-form notes (authoritative; alias of --memo).' },
+  equipment: { type: 'string', description: 'Equipment row id.' },
+  'total-time': { type: 'string', description: 'Total brew time in seconds.' },
+  source: { type: 'string', description: 'Source tag.' },
+  ratio: { type: 'string', description: 'params.ratio.' },
+  'grind-size': { type: 'string', description: 'params.grindSize.' },
+  'water-temp': { type: 'string', description: 'params.temp °C.' },
+  coffee: { type: 'string', description: 'params.coffee.' },
+  water: { type: 'string', description: 'params.water.' },
+  'taste-body': { type: 'string', description: 'Taste body 0-5.' },
+  'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
+  'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
+  'taste-bitterness': { type: 'string', description: 'Taste bitterness 0-5.' },
+  'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
+  format: { type: 'string' },
+} as const;
+
 export default defineCommand({
   meta: {
     name: 'update',
     description: 'Update a brewing note.',
   },
-  args: {
-    id: { type: 'positional', required: true, description: 'Note record ID.' },
-    rating: { type: 'string', description: 'Rating 0-5 (accepts decimals like 3.5).' },
-    method: { type: 'string', description: 'Method name.' },
-    memo: { type: 'string', description: 'Tasting notes.' },
-    notes: { type: 'string', description: 'Free-form notes (authoritative; alias of --memo).' },
-    equipment: { type: 'string', description: 'Equipment row id.' },
-    'total-time': { type: 'string', description: 'Total brew time in seconds.' },
-    source: { type: 'string', description: 'Source tag.' },
-    ratio: { type: 'string', description: 'params.ratio.' },
-    'grind-size': { type: 'string', description: 'params.grindSize.' },
-    'water-temp': { type: 'string', description: 'params.temp °C.' },
-    coffee: { type: 'string', description: 'params.coffee.' },
-    water: { type: 'string', description: 'params.water.' },
-    'taste-body': { type: 'string', description: 'Taste body 0-5.' },
-    'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
-    'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
-    'taste-bitterness': { type: 'string', description: 'Taste bitterness 0-5.' },
-    'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
-    format: { type: 'string' },
-  },
+  args: argsDef,
   async run({ args }) {
     const logger = createCommandLogger(['note', 'update'], args as Record<string, unknown>);
+    assertKnownFlags(args as Record<string, unknown>, argsDef, 'note update');
 
     const updates: Record<string, unknown> = {};
 

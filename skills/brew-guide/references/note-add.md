@@ -23,6 +23,8 @@
 - `--grind-size`  → `params.grindSize`
 - `--water-temp`  → `params.temp`（拼 `°C`）
 - `--ratio`       → `params.ratio`
+- `--coffee 15g`  → `params.coffee`（粉量原文照存，不换算）
+- `--water 225g`  → `params.water`（水量原文照存，不换算）
 - `--brew-time`   → `totalTime`（秒；支持 `"2:30"` 或纯数字）
 - `--flavor`      → 合并进 `notes`
 - `--score`（0–100） → `rating`（/20 → 0–5）
@@ -98,15 +100,19 @@ brew-guide bean consume <bean-id> --amount 15 --dry-run
 
 ## 6. 更新冲煮记录
 
-支持更新 `--rating`（0–5）、`--method`、`--memo`：
+支持更新 `--rating`（0–5）、`--method`、`--notes/--memo`，以及 `--coffee/--water/--ratio/--grind-size/--water-temp` 这组成分参数（会合并进同一个 `params`，只覆盖你传的那几项）：
 
 ```bash
 brew-guide note update <id> --rating 4 --memo "回甘更好" --dry-run
 ```
+
+## 7. 参数拼错会直接报错
+
+`note add` / `note update` 在 run() 开头校验参数名：写了没声明的 flag（比如把 `--coffee` 拼成 `--coffe`）会 `exit 2` 并列出可用参数，不再静默忽略。
 
 ## Anti-Patterns
 
 - ❌ 不要不关联 `bean-id` 就直接记冲煮
 - ❌ 不要跳过 dry-run
 - ❌ `--score` 范围 0–100；`--rating` 范围 0–5。不要混用
-- ❌ 不要自己拼 `params` JSON —— 用 `--ratio/--water-temp/--grind-size` 扁平参数即可
+- ❌ 不要自己拼 `params` JSON —— 用 `--coffee/--water/--ratio/--water-temp/--grind-size` 扁平参数即可

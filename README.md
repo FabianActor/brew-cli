@@ -90,8 +90,9 @@ brew-guide bean add --name "三重奏" --roaster "TRIOON" \
   --component "region=卡哈马卡;process=水洗" --component "region=库斯科;process=日晒;percentage=40"
 ```
 
-> **可选参数说明**：除成分字段外，还可提供 `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--notes` 完善咖啡豆信息。
+> **可选参数说明**：除成分字段外，还可提供 `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--flavor`, `--notes` 完善咖啡豆信息。
 > 成分字段（`--origin/--country/--region/--estate/--processing-station/--process/--variety/--altitude/--batch/--percentage`）作用于第一个成分；`update` 时可用 `--component-index N` 指定第几个成分（从 1 开始），或 `--component` 整组替换。
+> `bean add` / `bean update` 会校验参数名：拼错的 flag 直接 `exit 2` 并列出可用参数，不会静默忽略。
 
 ### 管理冲煮记录 (`note`)
 
@@ -107,8 +108,8 @@ brew-guide note add --bean-id "YOUR_BEAN_ID" --method "V60"
 ```
 
 > **可选参数说明**：`--notes`, `--rating`, `--total-time`, `--source`, `--equipment`, `--taste-body/--taste-acidity/--taste-sweetness/--taste-bitterness` 为当前真实字段；
-> `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 是兼容旧脚本的别名，会被归一到真实字段。
-> `--bean-id` 会在写入前校验豆子是否存在。
+> `--coffee`, `--water`, `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 是兼容旧脚本的别名，会被归一到真实字段（`--coffee/--water` 进 `params.coffee` / `params.water`）。
+> `--bean-id` 会在写入前校验豆子是否存在；未声明的 flag 会 `exit 2` 并列出可用参数。
 
 ### 查看烘焙商 (`roasters`)
 

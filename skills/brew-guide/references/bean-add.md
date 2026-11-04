@@ -185,14 +185,17 @@ brew-guide bean add \
 
 ## 9. 更新与消耗
 
-更新豆子字段（支持 `--name / --roaster / --roast-level / --capacity / --remaining / --price / --notes`，以及成分字段 `--origin / --country / --region / --estate / --processing-station / --altitude / --process / --variety / --batch / --percentage`）：
+更新豆子字段（支持 `--name / --roaster / --roast-level / --capacity / --remaining / --price / --notes / --bean-type / --flavor`，以及成分字段 `--origin / --country / --region / --estate / --processing-station / --altitude / --process / --variety / --batch / --percentage`）：
 
 ```bash
 brew-guide bean update <id> --remaining "120" --dry-run
 brew-guide bean update <id> --altitude "1920-2020m"                     # 默认改第 1 个成分
 brew-guide bean update <id> --component-index 2 --region "卡哈马卡"      # 改第 2 个成分
 brew-guide bean update <id> --component "origin=秘鲁;percentage=50" --component "origin=巴西;percentage=50"   # 整组替换
+brew-guide bean update <id> --bean-type filter --flavor "花香,莓果"      # 豆种与风味（风味逗号分隔成数组）
 ```
+
+`bean add` / `bean update` 会校验参数名：写了没声明的 flag 直接 `exit 2` 并列出可用参数（2026-11-04 之前是静默忽略，比如 `--bean-type` 在 update 上会被吞掉）。
 
 扣减余量（每次冲煮后自动扣减）：
 

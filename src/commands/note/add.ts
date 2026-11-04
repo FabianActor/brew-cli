@@ -3,6 +3,7 @@ import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { assertKnownFlags } from '../../lib/args.ts';
 import { fetchRecordById } from '../../services/base.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
 
@@ -41,6 +42,14 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   if (Object.keys(taste).length > 0) noteData.taste = taste;
 
   // 老字段（由 normalizeNote 转换到真实形状）
+  const params: Record<string, string> = {};
+  if (typeof args.coffee === 'string' && args.coffee) {
+    params.coffee = args.coffee;
+  }
+  if (typeof args.water === 'string' && args.water) {
+    params.water = args.water;
+  }
+  if (Object.keys(params).length > 0) noteData.params = params;
   if (typeof args['grind-size'] === 'string' && args['grind-size']) {
     noteData.grindSize = args['grind-size'];
   }
@@ -69,37 +78,42 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   return noteData;
 }
 
+const argsDef = {
+'bean-id': { type: 'string', required: true },
+method: { type: 'string', required: true },
+equipment: { type: 'string', description: 'Equipment row id (e.g. V60, Espresso).' },
+coffee: { type: 'string', description: '粉量，如 15g（→ params.coffee）。' },
+water: { type: 'string', description: '水量，如 225g（→ params.water）。' },
+  rating: { type: 'string', description: 'Rating 0-5 (authoritative).' },
+  source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
+  notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
+  'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
+  'taste-body': { type: 'string', description: 'Taste body 0-5.' },
+  'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
+  'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
+  'taste-bitterness': { type: 'string', description: 'Taste bitterness 0-5.' },
+  // legacy flat args — auto-normalized to real shape:
+  'grind-size': { type: 'string', description: '[legacy] → params.grindSize.' },
+  'water-temp': { type: 'string', description: '[legacy] → params.temp (°C).' },
+  ratio: { type: 'string', description: '[legacy] → params.ratio.' },
+  'brew-time': { type: 'string', description: '[legacy] mm:ss or seconds → totalTime.' },
+  flavor: { type: 'string', description: '[legacy] merged into notes.' },
+  score: { type: 'string', description: '[legacy] 0-100 → rating 0-5 (/20).' },
+  memo: { type: 'string', description: '[legacy] → notes.' },
+  'brewed-at': { type: 'string', description: '[legacy] ISO → timestamp.' },
+  'dry-run': { type: 'boolean' },
+  format: { type: 'string' },
+} as const;
+
 export default defineCommand({
   meta: {
     name: 'add',
     description: 'Create a brewing note record.',
   },
-  args: {
-    'bean-id': { type: 'string', required: true },
-    method: { type: 'string', required: true },
-    equipment: { type: 'string', description: 'Equipment row id (e.g. V60, Espresso).' },
-    rating: { type: 'string', description: 'Rating 0-5 (authoritative).' },
-    source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
-    notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
-    'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
-    'taste-body': { type: 'string', description: 'Taste body 0-5.' },
-    'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
-    'taste-sweetness': { type: 'string', description: 'Taste sweetness 0-5.' },
-    'taste-bitterness': { type: 'string', description: 'Taste bitterness 0-5.' },
-    // legacy flat args — auto-normalized to real shape:
-    'grind-size': { type: 'string', description: '[legacy] → params.grindSize.' },
-    'water-temp': { type: 'string', description: '[legacy] → params.temp (°C).' },
-    ratio: { type: 'string', description: '[legacy] → params.ratio.' },
-    'brew-time': { type: 'string', description: '[legacy] mm:ss or seconds → totalTime.' },
-    flavor: { type: 'string', description: '[legacy] merged into notes.' },
-    score: { type: 'string', description: '[legacy] 0-100 → rating 0-5 (/20).' },
-    memo: { type: 'string', description: '[legacy] → notes.' },
-    'brewed-at': { type: 'string', description: '[legacy] ISO → timestamp.' },
-    'dry-run': { type: 'boolean' },
-    format: { type: 'string' },
-  },
+  args: argsDef,
   async run({ args }) {
     const logger = createCommandLogger(['note', 'add'], args as Record<string, unknown>);
+    assertKnownFlags(args as Record<string, unknown>, argsDef, 'note add');
     const noteData = buildNoteData(args as Record<string, string | boolean | undefined>);
     const dryRun = args['dry-run'] === true;
     const jsonFormat = args.format === 'json';

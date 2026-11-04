@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
-import { nonEmptyString } from '../../lib/args.ts';
+import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import {
   assertComponentsUsable,
   buildBlendComponents,
@@ -12,44 +12,49 @@ import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { updateBean } from '../../services/beans.ts';
 
+const argsDef = {
+id: { type: 'positional', required: true, description: 'Bean record ID.' },
+  name: { type: 'string', description: 'Bean name.' },
+  roaster: { type: 'string', description: 'Roaster name.' },
+  'roast-level': { type: 'string', description: 'Roast level.' },
+  capacity: { type: 'string', description: 'Total capacity.' },
+  remaining: { type: 'string', description: 'Remaining amount.' },
+  price: { type: 'string', description: 'Price.' },
+  notes: { type: 'string', description: 'Notes.' },
+  origin: { type: 'string', description: '产地（写进 blendComponents[--component-index]，编号从 1 开始）。' },
+  process: { type: 'string', description: '处理法。' },
+  country: { type: 'string', description: '产国。' },
+  region: { type: 'string', description: '产区，如 "古吉 罕贝拉"。' },
+  estate: { type: 'string', description: '庄园 / 处理厂 / 合作社。' },
+  'processing-station': { type: 'string', description: '处理站。' },
+  altitude: { type: 'string', description: '海拔，如 "1920-2020m"。' },
+  variety: { type: 'string', description: '品种。' },
+  batch: { type: 'string', description: '批次。' },
+  percentage: { type: 'string', description: '成分占比 1-100。' },
+  'component-index': { type: 'string', description: '改第几个成分，编号从 1 开始（默认 1）。' },
+  component: {
+    type: 'string',
+    description:
+      '整组替换成分，可重复：--component "origin=秘鲁;percentage=33" --component "origin=巴西;percentage=67"。',
+  },
+  'roast-date': { type: 'string', description: 'Roast date (YYYY-MM-DD).' },
+  'start-day': { type: 'string', description: 'Optimal start day after roast.' },
+  'end-day': { type: 'string', description: 'Optimal end day after roast.' },
+  'bean-type': { type: 'string', description: '豆种：filter / espresso / omni。' },
+  flavor: { type: 'string', description: '风味，逗号分隔，如 "花香,莓果"。' },
+  'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
+  format: { type: 'string' },
+} as const;
+
 export default defineCommand({
   meta: {
     name: 'update',
     description: 'Update a coffee bean\'s fields.',
   },
-  args: {
-    id: { type: 'positional', required: true, description: 'Bean record ID.' },
-    name: { type: 'string', description: 'Bean name.' },
-    roaster: { type: 'string', description: 'Roaster name.' },
-    'roast-level': { type: 'string', description: 'Roast level.' },
-    capacity: { type: 'string', description: 'Total capacity.' },
-    remaining: { type: 'string', description: 'Remaining amount.' },
-    price: { type: 'string', description: 'Price.' },
-    notes: { type: 'string', description: 'Notes.' },
-    origin: { type: 'string', description: '产地（写进 blendComponents[--component-index]，编号从 1 开始）。' },
-    process: { type: 'string', description: '处理法。' },
-    country: { type: 'string', description: '产国。' },
-    region: { type: 'string', description: '产区，如 "古吉 罕贝拉"。' },
-    estate: { type: 'string', description: '庄园 / 处理厂 / 合作社。' },
-    'processing-station': { type: 'string', description: '处理站。' },
-    altitude: { type: 'string', description: '海拔，如 "1920-2020m"。' },
-    variety: { type: 'string', description: '品种。' },
-    batch: { type: 'string', description: '批次。' },
-    percentage: { type: 'string', description: '成分占比 1-100。' },
-    'component-index': { type: 'string', description: '改第几个成分，编号从 1 开始（默认 1）。' },
-    component: {
-      type: 'string',
-      description:
-        '整组替换成分，可重复：--component "origin=秘鲁;percentage=33" --component "origin=巴西;percentage=67"。',
-    },
-    'roast-date': { type: 'string', description: 'Roast date (YYYY-MM-DD).' },
-    'start-day': { type: 'string', description: 'Optimal start day after roast.' },
-    'end-day': { type: 'string', description: 'Optimal end day after roast.' },
-    'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
-    format: { type: 'string' },
-  },
+  args: argsDef,
   async run({ args }) {
     const logger = createCommandLogger(['bean', 'update'], args as Record<string, unknown>);
+    assertKnownFlags(args as Record<string, unknown>, argsDef, 'bean update');
 
     const updates: Record<string, unknown> = {};
     const name = nonEmptyString(args.name, '--name', '要改名字请给具体值');
@@ -58,6 +63,15 @@ export default defineCommand({
     if (roasterName !== undefined) updates.roaster = roasterName;
     const roastLevel = nonEmptyString(args['roast-level'], '--roast-level');
     if (roastLevel !== undefined) updates.roastLevel = roastLevel;
+    const beanType = nonEmptyString(args['bean-type'], '--bean-type');
+    if (beanType !== undefined) updates.beanType = beanType;
+    const flavorRaw = nonEmptyString(args.flavor, '--flavor');
+    if (flavorRaw !== undefined) {
+      updates.flavor = flavorRaw
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
     const capacity = nonEmptyString(normalizeWeight(args.capacity), '--capacity', '用 150 或 150g');
     if (capacity !== undefined) updates.capacity = capacity;
     const remaining = nonEmptyString(normalizeWeight(args.remaining), '--remaining', '用 120 或 120g');
