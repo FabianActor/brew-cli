@@ -7,12 +7,13 @@ import { consumeBean } from '../src/services/beans.ts';
 import { listRoasters } from '../src/services/roasters.ts';
 import { runCliSync } from './helpers/cli.mjs';
 
-/** 覆盖 consumeBean 需要的 select/eq/is/limit 与 upsert。 */
+/** 覆盖 consumeBean 需要的 select/eq/is/limit 与 upsert / update（compare-and-swap）。 */
 function createFakeSupabase({ rows = [], upsertError = null, rpcData = null, rpcError = null } = {}) {
   const upserts = [];
+  const updates = [];
 
   function from() {
-    const state = { filters: [] };
+    const state = { filters: [], patch: null };
     const matches = (row) =>
       state.filters.every(({ op, column, value }) => {
         const actual = row[column];
@@ -37,13 +38,26 @@ function createFakeSupabase({ rows = [], upsertError = null, rpcData = null, rpc
         upserts.push(row);
         return { data: null, error: upsertError };
       },
-      then: (resolve) => resolve({ data: rows.filter(matches), error: null }),
+      update: (patch) => {
+        state.patch = patch;
+        return api;
+      },
+      then: (resolve) => {
+        if (state.patch) {
+          const hits = rows.filter(matches);
+          for (const row of hits) Object.assign(row, state.patch);
+          updates.push({ patch: state.patch, matched: hits.length });
+          return resolve({ data: hits.map((hit) => ({ id: hit.id })), error: upsertError });
+        }
+        return resolve({ data: rows.filter(matches), error: null });
+      },
     };
     return api;
   }
 
   return {
     upserts,
+    updates,
     client: {
       from,
       rpc: async () => ({ data: rpcData, error: rpcError }),
@@ -52,7 +66,7 @@ function createFakeSupabase({ rows = [], upsertError = null, rpcData = null, rpc
 }
 
 test('consumeBean reports overdraw instead of silently clamping to zero', async () => {
-  const { client, upserts } = createFakeSupabase({
+  const { client, updates } = createFakeSupabase({
     rows: [
       {
         id: 'bean-1',
@@ -71,8 +85,10 @@ test('consumeBean reports overdraw instead of silently clamping to zero', async 
   assert.equal(result.consumed, 100, '只能扣掉实际存在的量');
   assert.equal(result.bean.remaining, '0');
   assert.equal(result.overdrawn, true);
-  assert.equal(upserts.length, 1);
-  assert.equal(upserts[0].data.remaining, '0');
+  // 走的是 compare-and-swap 更新（带上读到的 updated_at），不是盲 upsert
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].matched, 1);
+  assert.equal(updates[0].patch.data.remaining, '0');
 });
 
 test('consumeBean does not flag overdraw when the request fits in stock', async () => {

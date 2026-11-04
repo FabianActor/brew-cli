@@ -5,18 +5,20 @@ import { listSummaries } from '../src/lib/query.ts';
 import { pickSummaryFields } from '../src/lib/summary.ts';
 import { normalizeWeight, parseGrams } from '../src/lib/weights.ts';
 import { addEquipment } from '../src/services/equipment.ts';
+import { fetchActiveRecords, upsertRecord } from '../src/services/base.ts';
 import { resolveConfig } from '../src/config.ts';
 
 /**
- * 极简 Supabase query builder 替身：支持 select / eq / ilike / is / order / limit / range / upsert。
- * 只实现 CLI 实际用到的链式调用，够验证分页与筛选下推。
+ * 极简 Supabase query builder 替身：支持 select / eq / ilike / is / order / limit / range / upsert / update。
+ * 只实现 CLI 实际用到的链式调用，够验证分页、筛选下推与 compare-and-swap 写入。
  */
 function createFakeSupabase({ rows = [], error = null } = {}) {
   const upserts = [];
   const ranges = [];
+  const updates = [];
 
   function from(table) {
-    const state = { table, filters: [], limit: null, range: null };
+    const state = { table, filters: [], limit: null, range: null, patch: null };
 
     const matches = (row) => {
       for (const filter of state.filters) {
@@ -44,6 +46,13 @@ function createFakeSupabase({ rows = [], error = null } = {}) {
     };
 
     const result = () => {
+      if (state.patch) {
+        const hits = rows.filter(matches);
+        for (const row of hits) Object.assign(row, state.patch);
+        updates.push({ table, patch: state.patch, matched: hits.length });
+        return { data: hits.map((row) => ({ id: row.id })), error };
+      }
+
       let hits = rows.filter(matches);
       if (state.range) {
         ranges.push(state.range);
@@ -80,13 +89,17 @@ function createFakeSupabase({ rows = [], error = null } = {}) {
         upserts.push({ table, payload });
         return { error: null };
       },
+      update: (patch) => {
+        state.patch = patch;
+        return api;
+      },
       then: (onFulfilled, onRejected) => Promise.resolve(result()).then(onFulfilled, onRejected),
     };
 
     return api;
   }
 
-  return { supabase: { from }, upserts, ranges };
+  return { supabase: { from }, upserts, ranges, updates };
 }
 
 function makeRow(id, data) {
@@ -188,16 +201,81 @@ test('addEquipment refuses to overwrite an existing id without force', async () 
 
 test('addEquipment overwrites an existing id when force is set', async () => {
   const existing = makeRow('V60', { name: 'Hario V60', hasValve: false, note: '原器具' });
-  const { supabase, upserts } = createFakeSupabase({ rows: [existing] });
+  const { supabase, upserts, updates } = createFakeSupabase({ rows: [existing] });
 
   const saved = await addEquipment(supabase, 'V60 陶瓷', 'v60', true, '', 'default_user', 'V60', {
     force: true,
   });
 
   assert.equal(saved.id, 'V60');
-  assert.equal(upserts.length, 1);
-  assert.equal(upserts[0].payload.data.hasValve, true);
-  assert.equal(typeof upserts[0].payload.data.timestamp, 'number');
+  assert.equal(upserts.length, 0);
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].patch.data.hasValve, true);
+  assert.equal(typeof updates[0].patch.data.timestamp, 'number');
+});
+
+test('addEquipment --force keeps fields the CLI has no flag for', async () => {
+  const existing = makeRow('custom-origami-1', {
+    name: '冰瞳 B75',
+    animationType: 'origami',
+    customShapeSvg: '<svg/>',
+    customValveSvg: '<svg valve/>',
+    timestamp: 1780221171808,
+  });
+  const { supabase } = createFakeSupabase({ rows: [existing] });
+
+  const saved = await addEquipment(
+    supabase,
+    '冰瞳 B75',
+    'origami',
+    false,
+    '换了备注',
+    'default_user',
+    'custom-origami-1',
+    { force: true },
+  );
+
+  assert.equal(saved.customShapeSvg, '<svg/>');
+  assert.equal(saved.customValveSvg, '<svg valve/>');
+  assert.equal(saved.timestamp, 1780221171808);
+  assert.equal(saved.note, '换了备注');
+});
+
+test('upsertRecord refuses to write when updated_at moved after the read', async () => {
+  const row = makeRow('bean_1', { name: '旧名字' });
+  const readVersion = row.updated_at;
+  const { supabase, updates } = createFakeSupabase({ rows: [row] });
+
+  // 模拟 App 在这期间写过一次：库里的 updated_at 变了
+  row.updated_at = new Date(1700000009000).toISOString();
+
+  await assert.rejects(
+    () => upsertRecord(supabase, 'coffee_beans', 'bean_1', { name: '新名字' }, 'default_user', readVersion),
+    /被改过或删掉了/,
+  );
+  assert.equal(updates[0]?.matched, 0, '条件没命中：一个字段都没写');
+  assert.equal(row.data.name, '旧名字');
+});
+
+test('upsertRecord writes when updated_at still matches the read version', async () => {
+  const row = makeRow('bean_1', { name: '旧名字' });
+  const { supabase, updates } = createFakeSupabase({ rows: [row] });
+
+  await upsertRecord(supabase, 'coffee_beans', 'bean_1', { name: '新名字' }, 'default_user', row.updated_at);
+
+  assert.equal(updates.length, 1);
+  assert.equal(row.data.name, '新名字');
+});
+
+test('fetchActiveRecords pages through more rows than one request returns', async () => {
+  const rows = Array.from({ length: 700 }, (_, index) => makeRow(`method-${index}`, { methods: [] }));
+  const { supabase, ranges } = createFakeSupabase({ rows });
+
+  const all = await fetchActiveRecords(supabase, 'custom_methods', 'default_user');
+
+  assert.equal(all.length, 700);
+  assert.deepEqual(ranges[0], [0, 499]);
+  assert.deepEqual(ranges[1], [500, 999]);
 });
 
 test('addEquipment creates a row when the id is free', async () => {

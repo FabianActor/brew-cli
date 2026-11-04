@@ -97,7 +97,7 @@ export async function addMethod(
     data = { equipmentId, methods: [method] };
   }
 
-  await upsertRecord(supabase, TABLE, equipmentId, data, userId);
+  await upsertRecord(supabase, TABLE, equipmentId, data, userId, row?.updated_at);
   return { ...method, _equipmentId: equipmentId };
 }
 
@@ -126,7 +126,7 @@ export async function updateMethod(
         const updated = { ...m, ...updates, params: mergedParams };
         methods[i] = updated;
         data.methods = methods;
-        await upsertRecord(supabase, TABLE, row.id, data, userId);
+        await upsertRecord(supabase, TABLE, row.id, data, userId, row.updated_at);
         return { ...updated, _equipmentId: row.id };
       }
     }
@@ -154,7 +154,7 @@ export async function deleteMethod(
 
     if (filtered.length < methods.length) {
       data.methods = filtered;
-      await upsertRecord(supabase, TABLE, row.id, data, userId);
+      await upsertRecord(supabase, TABLE, row.id, data, userId, row.updated_at);
       return true;
     }
   }

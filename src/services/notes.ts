@@ -92,7 +92,7 @@ export async function updateNote(
   };
   if (mergedTaste !== undefined) merged.taste = mergedTaste;
   if (mergedParams !== undefined) merged.params = mergedParams;
-  await upsertRecord(supabase, TABLE, noteId, merged, userId);
+  await upsertRecord(supabase, TABLE, noteId, merged, userId, row.updated_at);
   return { ...merged, id: noteId };
 }
 
@@ -106,6 +106,6 @@ export async function deleteNote(
 ): Promise<boolean> {
   const row = await fetchRecordById(supabase, TABLE, noteId, userId);
   if (!row) return false;
-  await softDeleteRecord(supabase, TABLE, noteId, userId);
+  await softDeleteRecord(supabase, TABLE, noteId, userId, row.updated_at);
   return true;
 }

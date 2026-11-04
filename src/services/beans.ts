@@ -124,7 +124,7 @@ export async function updateBean(
     });
   }
 
-  await upsertRecord(supabase, TABLE, beanId, merged, userId);
+  await upsertRecord(supabase, TABLE, beanId, merged, userId, row.updated_at);
   return { ...merged, id: beanId };
 }
 
@@ -138,7 +138,7 @@ export async function deleteBean(
 ): Promise<boolean> {
   const row = await fetchRecordById(supabase, TABLE, beanId, userId);
   if (!row) return false;
-  await softDeleteRecord(supabase, TABLE, beanId, userId);
+  await softDeleteRecord(supabase, TABLE, beanId, userId, row.updated_at);
   return true;
 }
 
@@ -173,7 +173,7 @@ export async function consumeBean(
   const newRemaining = Math.max(0, previousRemaining - amountGrams);
   bean.remaining = `${newRemaining}`;
 
-  await upsertRecord(supabase, TABLE, beanId, bean, userId);
+  await upsertRecord(supabase, TABLE, beanId, bean, userId, row.updated_at);
   return {
     bean: { ...bean, id: beanId },
     previousRemaining,

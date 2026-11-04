@@ -86,17 +86,30 @@ export async function addEquipment(
     throw new Error(`器具 "${eqId}" 已存在（${existingName}）。换一个 --id，或加 --force 覆盖。`);
   }
 
-  const data: Record<string, unknown> = {
-    name,
-    isCustom: true,
-    animationType,
-    hasValve,
-    note,
-    // 主应用里所有 data.timestamp 都是毫秒数（customEquipmentStore.ts:112），不要写成 ISO 字符串。
-    timestamp: Date.now(),
-  };
+  // `--force` 覆盖时保留旧行里没有命令开关的字段（App 画的自定义图形等），
+  // 只替换显式传进来的这几项；否则一次覆盖就把别人画的东西抹掉了。
+  const data: Record<string, unknown> = existing
+    ? {
+        ...existing.data,
+        name,
+        isCustom: true,
+        animationType,
+        hasValve,
+        note,
+        timestamp:
+          typeof existing.data.timestamp === 'number' ? existing.data.timestamp : Date.now(),
+      }
+    : {
+        name,
+        isCustom: true,
+        animationType,
+        hasValve,
+        note,
+        // 主应用里所有 data.timestamp 都是毫秒数（customEquipmentStore.ts:112），不要写成 ISO 字符串。
+        timestamp: Date.now(),
+      };
 
-  await upsertRecord(supabase, TABLE, eqId, data, userId);
+  await upsertRecord(supabase, TABLE, eqId, data, userId, existing?.updated_at);
   return { ...data, id: eqId };
 }
 
@@ -113,7 +126,7 @@ export async function updateEquipment(
   if (!row) return null;
 
   const merged = { ...row.data, ...updates };
-  await upsertRecord(supabase, TABLE, eqId, merged, userId);
+  await upsertRecord(supabase, TABLE, eqId, merged, userId, row.updated_at);
   return { ...merged, id: eqId };
 }
 
@@ -127,6 +140,6 @@ export async function deleteEquipment(
 ): Promise<boolean> {
   const row = await fetchRecordById(supabase, TABLE, eqId, userId);
   if (!row) return false;
-  await softDeleteRecord(supabase, TABLE, eqId, userId);
+  await softDeleteRecord(supabase, TABLE, eqId, userId, row.updated_at);
   return true;
 }

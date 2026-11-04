@@ -38,6 +38,16 @@ function createLegacyBeanDatabase(data) {
           writtenRow = row;
           return Promise.resolve({ error: null });
         },
+        update(patch) {
+          writtenRow = { data: patch.data };
+          const chain = {
+            eq: () => chain,
+            is: () => chain,
+            select: () => chain,
+            then: (resolve) => resolve({ data: [{ id: 'written' }], error: null }),
+          };
+          return chain;
+        },
       };
     },
   };
@@ -98,6 +108,16 @@ test('updating a legacy brewing note restores its embedded id', async () => {
         upsert(row) {
           writtenRow = row;
           return Promise.resolve({ error: null });
+        },
+        update(patch) {
+          writtenRow = { data: patch.data };
+          const chain = {
+            eq: () => chain,
+            is: () => chain,
+            select: () => chain,
+            then: (resolve) => resolve({ data: [{ id: 'written' }], error: null }),
+          };
+          return chain;
         },
       };
     },
