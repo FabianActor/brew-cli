@@ -2,6 +2,11 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
+import {
+  assertComponentsUsable,
+  buildBlendComponents,
+  componentFromFlags,
+} from '../../lib/blendComponents.ts';
 import { executeUpsertBean } from '../../tools/upsertBean.ts';
 
 function normalizeWeight(value: string | undefined) {
@@ -13,7 +18,7 @@ function normalizeWeight(value: string | undefined) {
   return normalized || undefined;
 }
 
-function buildBeanData(args: Record<string, string | boolean | undefined>) {
+function buildBeanData(args: Record<string, string | boolean | string[] | undefined>) {
   const normalizedCapacity = typeof args.capacity === 'string' ? normalizeWeight(args.capacity) : undefined;
 
   const beanData: Record<string, unknown> = {
@@ -21,18 +26,9 @@ function buildBeanData(args: Record<string, string | boolean | undefined>) {
     roaster: args.roaster,
   };
 
-  const blendComponent: Record<string, unknown> = {
-    origin: args.origin,
-    process: args.process,
-  };
+  const blendComponents = buildBlendComponents(args.component, componentFromFlags(args));
+  assertComponentsUsable(blendComponents);
 
-  if (typeof args.estate === 'string' && args.estate) {
-    blendComponent.estate = args.estate;
-  }
-
-  if (typeof args.variety === 'string' && args.variety) {
-    blendComponent.variety = args.variety;
-  }
   if (typeof args['roast-level'] === 'string' && args['roast-level']) {
     beanData.roastLevel = args['roast-level'];
   }
@@ -69,7 +65,7 @@ function buildBeanData(args: Record<string, string | boolean | undefined>) {
     beanData.notes = args.notes;
   }
 
-  beanData.blendComponents = [blendComponent];
+  beanData.blendComponents = blendComponents;
   beanData.beanState = 'roasted';
   beanData.isFrozen = false;
   const startDay = typeof args['start-day'] === 'string' && args['start-day'] ? Number(args['start-day']) : 30;
@@ -97,10 +93,21 @@ export default defineCommand({
   args: {
     name: { type: 'string', required: true },
     roaster: { type: 'string', required: true },
-    origin: { type: 'string', required: true },
-    process: { type: 'string', required: true },
-    estate: { type: 'string' },
-    variety: { type: 'string' },
+    origin: { type: 'string', description: '产地（当前口径：填国家）。' },
+    process: { type: 'string', description: '处理法。' },
+    country: { type: 'string', description: '产国（产国字段启用时才用）。' },
+    region: { type: 'string', description: '产区，大区+细分用空格连接，如 "古吉 罕贝拉"。' },
+    estate: { type: 'string', description: '庄园 / 处理厂 / 合作社。' },
+    'processing-station': { type: 'string', description: '处理站（仅标签明写处理站时填）。' },
+    altitude: { type: 'string', description: '海拔，如 "1920-2020m"。' },
+    variety: { type: 'string', description: '品种，多品种用 " / " 连接。' },
+    batch: { type: 'string', description: '批次。' },
+    percentage: { type: 'string', description: '该成分占比 1-100（拼配用）。' },
+    component: {
+      type: 'string',
+      description:
+        '完整成分，可重复：--component "origin=秘鲁;region=卡哈马卡;process=水洗;variety=SL-09;percentage=33"。给了它就不必再给扁平 flag。',
+    },
     'roast-level': { type: 'string' },
     'roast-date': { type: 'string' },
     price: { type: 'string' },
@@ -115,7 +122,7 @@ export default defineCommand({
   },
   async run({ args }) {
     const logger = createCommandLogger(['bean', 'add'], args as Record<string, unknown>);
-    const beanData = buildBeanData(args as Record<string, string | boolean | undefined>);
+    const beanData = buildBeanData(args as Record<string, string | boolean | string[] | undefined>);
     const dryRun = args['dry-run'] === true;
     const jsonFormat = args.format === 'json';
 

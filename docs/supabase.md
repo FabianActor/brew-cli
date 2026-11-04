@@ -104,7 +104,8 @@ Normalization applied on bean upsert:
 - generates an id if missing
 - sets `timestamp` if missing
 - converts legacy top-level origin/process/estate/variety fields into `blendComponents` when needed
-- removes those duplicated top-level origin/process/estate/variety fields after conversion
+- converts the flat `country` / `region` / `processingStation` / `altitude` / `batch` fields into the first component too
+- removes those duplicated top-level component fields after conversion
 - normalizes `capacity` and `remaining` strings by stripping spaces and trailing `g/克`
 - defaults:
   - `beanType = filter`

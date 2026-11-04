@@ -30,8 +30,8 @@
 4. 仅解析明确可见的豆子字段。`brew-guide bean add` 最低要求：
    - `name`
    - `roaster`
-   - `origin`
-   - `process`
+   - 至少一个成分带 `origin`
+   - 至少一个成分带 `process`
 
 5. 写入前：
    - 执行 `brew-guide roasters --format json`

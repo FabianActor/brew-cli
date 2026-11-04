@@ -13,9 +13,9 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 
 **NEVER create incomplete records.** 先收集足够信息，再写入。
 
-**字段口径**：产地 / 产区 / 庄园 / 处理站 / 处理法 / 品种怎么拆，见 `references/bean-add.md` 的「1.5 字段拆分口径」，不要凭直觉把一整串地名塞进 `--origin`。
+**字段口径**：产地 / 产区 / 庄园 / 处理站 / 海拔 / 处理法 / 品种怎么拆，见 `references/bean-add.md` 的「1.5 字段拆分口径」，不要凭直觉把一整串地名塞进 `--origin`。
 
-> ⚠️ 当前 `bean add` 只有 `--origin / --estate / --process / --variety` 四个成分 flag，`region`、`processingStation`、`percentage` 还传不进去；遇到需要它们的豆子，先按口径想清楚，落地时再补齐（见 `bean-add.md` 拼配说明）。
+> 成分字段全都有 flag：`--origin --country --region --estate --processing-station --altitude --process --variety --batch --percentage`；拼配用可重复的 `--component "origin=…;region=…;process=…;percentage=33"`。详见 `bean-add.md` 拼配说明。
 
 ## 渐进式披露（重要）
 
@@ -44,10 +44,10 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." --roaster "..." --origin "..." --process "..." [--start-day 30] [--end-day 60] [options] [--dry-run]` |
+| `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." --roaster "..." --origin "..." --process "..." [--region ...] [--estate ...] [--processing-station ...] [--altitude ...] [--variety ...] [--batch ...] [--start-day 30] [--end-day 60] [options] [--dry-run]`；拼配加可重复的 `--component "origin=…;percentage=33"` |
 | `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--has-remaining true] [--format json]` |
 | `bean get` | 详情 | `brew-guide bean get <id> [--format json]` |
-| `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--process "..."] [--variety "..."] [--estate "..."] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--dry-run]`（origin/process/variety/estate 合并进 blendComponents[0]）|
+| `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--region "..."] [--processing-station "..."] [--altitude "..."] [--process "..."] [--variety "..."] [--estate "..."] [--batch "..."] [--percentage 33] [--component-index 2] [--component "origin=…;percentage=50"] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--dry-run]`（成分字段合并进 `--component-index` 指定的成分，默认第 1 个；`--component` 整组替换）|
 | `bean delete` | 软删除 | `brew-guide bean delete <id> [--dry-run]` |
 | `bean consume` | 扣减余量 | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]` |
 

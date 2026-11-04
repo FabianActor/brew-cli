@@ -7,10 +7,11 @@
 **必填**
 - `name`
 - `roaster`
-- `origin`
-- `process`
+- 成分至少一个带 `origin`
+- 成分至少一个带 `process`
 
 **推荐填写**
+- `region`（产区）
 - `estate`
 - `variety`
 - `roastDate`
@@ -18,12 +19,15 @@
 - `beanType`
 
 **可选**
+- `processingStation`（处理站）
+- `altitude`（海拔）
+- `batch`（批次）
 - `roastLevel`
 - `price`
 - `flavor`
 - `notes`
 
-> `startDay / endDay` CLI 不支持 flag 传参，新增时固定 `30 / 60`。
+> `startDay / endDay` 用 `--start-day` / `--end-day` 传，不传则固定 `30 / 60`。
 
 ## 1.5 字段拆分口径（Fabian 定，2026-11-04）
 
@@ -31,22 +35,32 @@
 
 | 字段 | 放什么 | 例子 |
 |---|---|---|
-| `origin` 产地 | **国家**。产国字段是关闭的，国家只能落在这里 | `埃塞俄比亚`、`中国云南`、`巴布亚新几内亚` |
-| `region` 产区 | 大区 + 细分，空格连接，不写成两级 | `古吉 罕贝拉`、`西达摩 班莎`、`耶加雪菲`、`保山龙陵`、`涅里` |
-| `estate` 庄园 | 处理厂 / 合作社 / 农场 / 庄园名 | `奇拉卡`、`Buku Abel`、`Gedeb Danche`、`楠迪庄园`、`加恰莎` |
-| `processingStation` 处理站 | **只有标签明写"处理站"时才填**，站名或站主 | `Yaye-Testi`、`Faysel Abdosh`、`希尔达` |
-| `process` 处理法 | 原样照抄，不要归并成大类 | `厌氧日晒`、`浸没冷发酵水洗`、`三重发酵水洗`、`水洗/日晒` |
-| `variety` 品种 | 只放品种；同成分多品种用 `" / "` 连 | `74110 / 74112`、`卡蒂姆`、`原生种`、`SL28 / SL34` |
+| `origin` 产地 `--origin` | **国家**。产国字段是关闭的，国家只能落在这里 | `埃塞俄比亚`、`中国云南`、`巴布亚新几内亚` |
+| `region` 产区 `--region` | 大区 + 细分，空格连接，不写成两级 | `古吉 罕贝拉`、`西达摩 班莎`、`耶加雪菲`、`保山龙陵`、`涅里` |
+| `estate` 庄园 `--estate` | 处理厂 / 合作社 / 农场 / 庄园名 | `奇拉卡`、`Buku Abel`、`Gedeb Danche`、`楠迪庄园`、`加恰莎` |
+| `processingStation` 处理站 `--processing-station` | **只有标签明写"处理站"时才填**，站名或站主 | `Yaye-Testi`、`Faysel Abdosh`、`希尔达` |
+| `process` 处理法 `--process` | 原样照抄，不要归并成大类 | `厌氧日晒`、`浸没冷发酵水洗`、`三重发酵水洗`、`水洗/日晒` |
+| `variety` 品种 `--variety` | 只放品种；同成分多品种用 `" / "` 连 | `74110 / 74112`、`卡蒂姆`、`原生种`、`SL28 / SL34` |
+| `altitude` 海拔 `--altitude` | 带单位、区间用连字符，如 `1920-2020m`；字段没开就退回备注固定标签行 | `2520m`、`1400-1900m`、`1600m+` |
+| `batch` 批次 `--batch` | 批次号原样；字段没开就退回备注固定标签行 | `Lot 25/01`、`圆石12月批次` |
 | 等级 `G1` / `AA` / `Supremo` | **不进任何字段**，只保留在豆名里 | 豆名写 `埃塞 耶加雪菲 果丁丁 水洗G1`，字段不写 G1 |
-| 海拔 `1920-2020m` | 海拔字段关闭，写进 `notes` 一行 `海拔：1920-2020m` | — |
-| 产国 `country` | 关闭。国家已经在 `origin` 里，两处都有就是重复 | — |
+| 产国 `country` `--country` | 关闭。国家已经在 `origin` 里，两处都有就是重复 | — |
 
 补充规则：
 
 - **大区与细分不拆两栏**：`古吉` + `罕贝拉` 合成 `古吉 罕贝拉` 放 `region`，不要再往下拆。
 - **别把产区填进庄园**：`耶加雪菲`、`西达摩`、`布果尼` 这类是产区；庄园栏只放具体厂/合作社名。
 - **处理站 vs 庄园**：注意站和庄园是两回事；拿不准就填庄园，处理站留空。
-- **拼配多成分**：每个成分单独一组，各自带 `percentage`；只有品种/处理法不同的"多个成分"要合并成一条（`variety` 用 ` / ` 连），不要当成两颗豆。
+- **拼配多成分**：每个成分单独一组，各自带 `percentage`（1-100）。`--component` 可重复，一个 flag 一个成分：
+
+  ```bash
+  brew-guide bean add --name "TRIOON" --roaster "..." \
+    --component "origin=埃塞俄比亚;region=古吉;process=水洗;percentage=33" \
+    --component "origin=秘鲁;region=卡哈马卡;process=水洗;percentage=33" \
+    --component "origin=哥伦比亚;region=慧兰;process=水洗;percentage=34"
+  ```
+
+  只有品种/处理法不同的"多个成分"要合并成一条（`variety` 用 ` / ` 连），不要当成两颗豆。单成分时用扁平 flag 更省事，两种写法可以混用：`--component` 里的值优先，扁平 flag 只补第一个成分还空着的字段。
 - **物种不是品种**：`阿拉比卡` 是物种，云南的卡蒂姆就写 `卡蒂姆`。
 
 ## 2. 烘焙商先匹配
@@ -72,12 +86,13 @@ brew-guide roasters --format json
 我识别到这些信息：
 - 名称：秘鲁 美景庄园 SL-09 水洗
 - 烘焙商：Finish Line Coffee
-- 产地：秘鲁 卡哈马卡大区
+- 产地：秘鲁
+- 产区：卡哈马卡
 - 庄园：VISTA ALEGRE
 - 处理法：水洗
 - 品种：SL-09
 - 规格：150G
-- 海拔：1920M
+- 海拔：1920m
 
 还缺：烘焙日期
 ```
@@ -126,14 +141,13 @@ brew-guide roasters --format json
 - 长段商品介绍/OCR 原文
 - 为了“保存信息”而重复记录的海拔、采收时间、处理站等结构化产地信息
 
-**例外（字段关闭时的落法）**：`海拔`、`批次` 字段当前是关闭的，这两类信息写成**固定标签行**放进 `notes`，方便以后一键搬进字段：
+**例外（字段关闭时的落法）**：`海拔` 已启用，一律填 `--altitude`，不要再写进备注。`批次` 字段如果在你那边还是关的，就写成固定标签行放进 `notes`：
 
 ```text
-海拔：1920-2020m
 批次：2026-03 定制批次
 ```
 
-处理站能填字段就填字段，不要再在备注里写一遍。
+处理站、产区能填字段就填字段，不要再在备注里写一遍。`海拔：1920-2020m` 这种标签行只在字段不可用时才用——字段开着还写，就是同一信息存两处。
 
 **可以放进 `notes` 的例子：**
 
@@ -151,10 +165,12 @@ brew-guide roasters --format json
 brew-guide bean add \
   --name "秘鲁 美景庄园 SL-09 水洗" \
   --roaster "Finish Line Coffee" \
-  --origin "秘鲁 卡哈马卡大区" \
-  --process "水洗" \
+  --origin "秘鲁" \
+  --region "卡哈马卡" \
   --estate "VISTA ALEGRE" \
+  --process "水洗" \
   --variety "SL-09" \
+  --altitude "1920m" \
   --roast-level "浅度烘焙" \
   --roast-date "2026-03-20" \
   --price "55" \
@@ -169,10 +185,13 @@ brew-guide bean add \
 
 ## 9. 更新与消耗
 
-更新豆子字段（支持 `--name / --roaster / --roast-level / --capacity / --remaining / --price / --notes`）：
+更新豆子字段（支持 `--name / --roaster / --roast-level / --capacity / --remaining / --price / --notes`，以及成分字段 `--origin / --country / --region / --estate / --processing-station / --altitude / --process / --variety / --batch / --percentage`）：
 
 ```bash
 brew-guide bean update <id> --remaining "120" --dry-run
+brew-guide bean update <id> --altitude "1920-2020m"                     # 默认改第 1 个成分
+brew-guide bean update <id> --component-index 2 --region "卡哈马卡"      # 改第 2 个成分
+brew-guide bean update <id> --component "origin=秘鲁;percentage=50" --component "origin=巴西;percentage=50"   # 整组替换
 ```
 
 扣减余量（每次冲煮后自动扣减）：
@@ -207,11 +226,11 @@ OCR 工具。直接返回 JSON：单豆 `{}`，多豆 `[]`。无 markdown/解释
   - 默认 `filter`
 - `flavor`：数组 `["橘子","荔枝"]`
 - `startDay` / `endDay`：养豆期/赏味期天数
-- `blendComponents`：产地/庄园/处理法/品种
+- `blendComponents`：产国/产地/产区/庄园/处理站/海拔/处理法/品种/批次
   ```json
-  [{"origin":"埃塞俄比亚","estate":"赏花","process":"日晒","variety":"原生种"}]
+  [{"origin":"埃塞俄比亚","region":"古吉 罕贝拉","estate":"赏花","altitude":"2350m","process":"日晒","variety":"原生种"}]
   ```
-- `notes`：处理站/海拔/批次号等补充。**产地和庄园放 `blendComponents`，此处只放补充**
+- `notes`：评分、冲煮建议等真正的补充。**产地/产区/庄园/处理站/海拔/品种都放 `blendComponents`，此处只放补充**
 
 ### 规则
 
@@ -222,17 +241,17 @@ OCR 工具。直接返回 JSON：单豆 `{}`，多豆 `[]`。无 markdown/解释
 ### 映射到 CLI
 
 OCR JSON → flags：
-- `blendComponents[0].origin/estate/process/variety` → `--origin/--estate/--process/--variety`
+- 单成分：`blendComponents[0]` 的 `origin/country/region/estate/processingStation/altitude/process/variety/batch/percentage` → 同名扁平 flag（`processingStation` → `--processing-station`）
+- 多成分：每个成分一条 `--component "origin=…;region=…;process=…;percentage=…"`，`percentage` 用数字
 - `flavor` 数组 → `--flavor "a,b,c"`（逗号拼接）
 - 多豆数组 → 每豆分别 `bean add`
-- `startDay / endDay` 抽到也无法传入（CLI 无对应 flag），需要时事后 `bean update` 不支持，直接忽略或写入 `notes`
+- `startDay / endDay` → `--start-day / --end-day`
 - `remaining` 抽到且与 `capacity` 不等 → `bean add` 后再 `bean update <id> --remaining "X"`
-
-拼配豆（多个 `blendComponents`）当前 CLI 仅单组产地/处理/品种，其余成分写入 `--notes`。
 
 ## Anti-Patterns
 
 - ❌ 不要只写名字和备注
 - ❌ 不要跳过 roaster matching
 - ❌ 不要跳过 dry-run
-- ❌ 不要缺少 `name / roaster / origin / process` 就直接提交
+- ❌ 不要缺少 `name / roaster`，或成分里一个 `origin` / `process` 都没有，就直接提交
+- ❌ 不要把海拔、产区、处理站再抄一遍进 `notes`

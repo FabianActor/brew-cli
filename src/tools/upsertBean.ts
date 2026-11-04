@@ -24,11 +24,36 @@ export const upsertBeanParameters = Type.Object({
     {
       id: Type.Optional(Type.String({ description: 'Bean record ID. Auto-generated if omitted.' })),
       name: Type.String({ description: 'Coffee bean name.' }),
-      origin: Type.Optional(Type.String({ description: 'Country or region of origin.' })),
+      origin: Type.Optional(Type.String({ description: 'Country or region of origin (legacy field: put the country here).' })),
+      country: Type.Optional(Type.String({ description: 'Country of origin (only when the country field is enabled).' })),
+      region: Type.Optional(Type.String({ description: 'Region, e.g. "Guji Hambela".' })),
+      estate: Type.Optional(Type.String({ description: 'Estate / washing station / cooperative name.' })),
+      processingStation: Type.Optional(Type.String({ description: 'Processing station, when explicitly labeled.' })),
+      altitude: Type.Optional(Type.String({ description: 'Altitude, e.g. "1920-2020m".' })),
       roaster: Type.Optional(Type.String({ description: 'Roaster name.' })),
       process: Type.Optional(Type.String({ description: 'Processing method (e.g. washed, natural).' })),
-      estate: Type.Optional(Type.String({ description: 'Estate or farm name.' })),
       variety: Type.Optional(Type.String({ description: 'Coffee variety (e.g. Gesha, Typica).' })),
+      batch: Type.Optional(Type.String({ description: 'Lot / batch.' })),
+      blendComponents: Type.Optional(
+        Type.Array(
+          Type.Object(
+            {
+              percentage: Type.Optional(Type.Number({ description: 'Share of the blend, 1-100.' })),
+              origin: Type.Optional(Type.String()),
+              country: Type.Optional(Type.String()),
+              region: Type.Optional(Type.String()),
+              estate: Type.Optional(Type.String()),
+              processingStation: Type.Optional(Type.String()),
+              altitude: Type.Optional(Type.String()),
+              process: Type.Optional(Type.String()),
+              variety: Type.Optional(Type.String()),
+              batch: Type.Optional(Type.String()),
+            },
+            { additionalProperties: true },
+          ),
+          { description: 'Blend components. Overrides the flat origin/process/... fields.' },
+        ),
+      ),
       roastLevel: Type.Optional(Type.String({ description: 'Roast level (e.g. light, medium, dark).' })),
       purchaseDate: Type.Optional(Type.String({ description: 'Purchase date (ISO string).' })),
       roastDate: Type.Optional(Type.String({ description: 'Roast date (ISO string).' })),
@@ -65,27 +90,39 @@ export async function executeUpsertBean(
 
   if (!Array.isArray(normalizedBean.blendComponents) || normalizedBean.blendComponents.length === 0) {
     const component: Record<string, unknown> = {};
-    if (typeof normalizedBean.origin === 'string' && normalizedBean.origin) {
-      component.origin = normalizedBean.origin;
-    }
-    if (typeof normalizedBean.process === 'string' && normalizedBean.process) {
-      component.process = normalizedBean.process;
-    }
-    if (typeof normalizedBean.estate === 'string' && normalizedBean.estate) {
-      component.estate = normalizedBean.estate;
-    }
-    if (typeof normalizedBean.variety === 'string' && normalizedBean.variety) {
-      component.variety = normalizedBean.variety;
+    const flatKeys = [
+      'origin',
+      'country',
+      'region',
+      'estate',
+      'processingStation',
+      'altitude',
+      'process',
+      'variety',
+      'batch',
+    ] as const;
+    for (const key of flatKeys) {
+      const value = normalizedBean[key];
+      if (typeof value === 'string' && value) component[key] = value;
     }
     if (Object.keys(component).length > 0) {
       normalizedBean.blendComponents = [component];
     }
   }
 
-  delete normalizedBean.origin;
-  delete normalizedBean.process;
-  delete normalizedBean.variety;
-  delete normalizedBean.estate;
+  for (const key of [
+    'origin',
+    'country',
+    'region',
+    'estate',
+    'processingStation',
+    'altitude',
+    'process',
+    'variety',
+    'batch',
+  ] as const) {
+    delete normalizedBean[key];
+  }
 
   normalizedBean.capacity = normalizeWeight(normalizedBean.capacity) as CoffeeBean['capacity'];
   normalizedBean.remaining = normalizeWeight(normalizedBean.remaining) as CoffeeBean['remaining'];
