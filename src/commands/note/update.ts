@@ -4,6 +4,7 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
 import { updateNote } from '../../services/notes.ts';
 
 /** 解析 0-5 的评分字段，非法时直接按用法错误退出。 */
@@ -12,11 +13,7 @@ function parseScore(value: unknown, flag: string): number | undefined {
   if (value.trim() === '') {
     exitWithError(`Error: ${flag} 不能是空字符串（想去掉评分请用 --rating 给 0）`, EXIT.USAGE);
   }
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) {
-    exitWithError(`Error: ${flag} must be a number between 0 and 5.`, EXIT.USAGE);
-  }
-  return parsed;
+  return parseRating(value, flag);
 }
 
 const argsDef = {
@@ -82,11 +79,7 @@ export default defineCommand({
     const grindSize = nonEmptyString(args['grind-size'], '--grind-size');
     if (grindSize !== undefined) paramsPatch.grindSize = grindSize;
     if (typeof args['water-temp'] === 'string' && args['water-temp']) {
-      const temp = Number.parseFloat(args['water-temp']);
-      if (!Number.isFinite(temp)) {
-        exitWithError('Error: --water-temp must be a number.', EXIT.USAGE);
-      }
-      paramsPatch.temp = `${temp}°C`;
+      paramsPatch.temp = parseTemperature(args['water-temp']);
     }
     const coffee = nonEmptyString(args.coffee, '--coffee');
     if (coffee !== undefined) paramsPatch.coffee = coffee;

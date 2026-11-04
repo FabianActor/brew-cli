@@ -90,13 +90,12 @@ export function createDeleteCommand(spec: EntityDeleteSpec) {
     async run({ args }) {
       const logger = createCommandLogger([spec.entity, 'delete'], args as Record<string, unknown>);
       assertKnownFlags(args as Record<string, unknown>, argsDef, `${spec.entity} delete`);
-      const shortId = args.id.slice(0, 8);
 
       if (args['dry-run']) {
         if (args.format === 'json') {
           printJson({ dryRun: true, action: 'delete', id: args.id });
         } else {
-          console.log(`[dry-run] Would delete ${spec.entity} ${shortId}`);
+          console.log(`[dry-run] Would delete ${spec.entity} ${args.id}`);
         }
         await logger.success();
         return;
@@ -115,7 +114,7 @@ export function createDeleteCommand(spec: EntityDeleteSpec) {
         if (args.format === 'json') {
           printJson({ deleted: args.id });
         } else {
-          console.log(`Deleted ${spec.entity} ${shortId}`);
+          console.log(`Deleted ${spec.entity} ${args.id}`);
         }
 
         await logger.success();

@@ -9,9 +9,19 @@ import {
   componentFromFlags,
 } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { warn } from '../../lib/output.ts';
+import { flavorPeriodForRoastLevel, normalizeRoastLevel, BEAN_TYPES } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { upsertBeanRecord } from '../../tools/upsertBean.ts';
 
+function parseDayArg(value: unknown, fallback: number, flag: string): number {
+  if (typeof value !== 'string' || value.trim() === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    exitWithError(`Error: ${flag} must be a non-negative number of days.`, EXIT.USAGE);
+  }
+  return parsed;
+}
 
 function buildBeanData(args: Record<string, string | boolean | string[] | undefined>) {
   const normalizedCapacity = typeof args.capacity === 'string' ? normalizeWeight(args.capacity) : undefined;
@@ -24,17 +34,25 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
   const blendComponents = buildBlendComponents(args.component, componentFromFlags(args));
   assertComponentsUsable(blendComponents);
 
+  // 烘焙度：给了就照写（顺手把「浅度」补成「浅度烘焙」），没给就留空。
+  // 以前没给时会按 bean-type 猜一个（filter→浅度、espresso→中深），猜错就污染 App 的筛选。
+  let roastLevel: string | undefined;
   if (typeof args['roast-level'] === 'string' && args['roast-level']) {
-    beanData.roastLevel = args['roast-level'];
+    const normalized = normalizeRoastLevel(args['roast-level']);
+    if (normalized.warning) warn(normalized.warning);
+    roastLevel = normalized.value;
+    beanData.roastLevel = roastLevel;
   }
+
+  // 在途：App 的默认值是「已到手」（BeanListItem.tsx:304 读 `bean.isInTransit || false`），
+  // 只有手动点过「设为在途」才是 true。以前没给烘焙日期就写 true，加一颗手上的豆，
+  // 卡片上直接显示「在途」。
+  beanData.isInTransit = false;
   if (typeof args['roast-date'] === 'string' && args['roast-date']) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args['roast-date'])) {
       exitWithError('Error: --roast-date must be YYYY-MM-DD.', EXIT.USAGE);
     }
     beanData.roastDate = args['roast-date'];
-    beanData.isInTransit = false;
-  } else {
-    beanData.isInTransit = true;
   }
   if (typeof args.price === 'string' && args.price) {
     beanData.price = args.price;
@@ -42,13 +60,13 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
   if (typeof normalizedCapacity === 'string' && normalizedCapacity) {
     beanData.capacity = normalizedCapacity;
   }
-  beanData.beanType = typeof args['bean-type'] === 'string' && args['bean-type'] ? args['bean-type'] : 'filter';
-  if (!beanData.roastLevel && beanData.beanType === 'filter') {
-    beanData.roastLevel = '浅度烘焙';
+
+  const beanType =
+    typeof args['bean-type'] === 'string' && args['bean-type'] ? args['bean-type'].trim() : 'filter';
+  if (!(BEAN_TYPES as readonly string[]).includes(beanType)) {
+    exitWithError(`Error: --bean-type must be one of ${BEAN_TYPES.join(', ')}.`, EXIT.USAGE);
   }
-  if (!beanData.roastLevel && beanData.beanType === 'espresso') {
-    beanData.roastLevel = '中深烘焙';
-  }
+  beanData.beanType = beanType;
   if (typeof args.flavor === 'string' && args.flavor) {
     beanData.flavor = args.flavor
       .split(',')
@@ -62,10 +80,11 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
   beanData.blendComponents = blendComponents;
   beanData.beanState = 'roasted';
   beanData.isFrozen = false;
-  const startDay = typeof args['start-day'] === 'string' && args['start-day'] ? Number(args['start-day']) : 30;
-  const endDay = typeof args['end-day'] === 'string' && args['end-day'] ? Number(args['end-day']) : 60;
-  beanData.startDay = Number.isFinite(startDay) ? startDay : 30;
-  beanData.endDay = Number.isFinite(endDay) ? endDay : 60;
+  // 赏味期默认值与 App 同源（浅 7/60、中 10/60、深 14/90，烘焙度为空按中烘）。
+  // 以前固定 30/60，浅烘豆在 App 里会被算成「养豆期 30 天」，赏味期整段后移。
+  const period = flavorPeriodForRoastLevel(roastLevel);
+  beanData.startDay = parseDayArg(args['start-day'], period.startDay, '--start-day');
+  beanData.endDay = parseDayArg(args['end-day'], period.endDay, '--end-day');
 
   if (typeof normalizedCapacity === 'string' && normalizedCapacity) {
     beanData.remaining = normalizedCapacity;
@@ -93,15 +112,15 @@ const argsDef = {
     description:
       '完整成分，可重复：--component "origin=秘鲁;region=卡哈马卡;process=水洗;variety=SL-09;percentage=33"。给了它就不必再给扁平 flag。',
   },
-  'roast-level': { type: 'string' },
+  'roast-level': { type: 'string', description: '烘焙度：极浅烘焙 / 浅度烘焙 / 中浅烘焙 / 中度烘焙 / 中深烘焙 / 深度烘焙（也接受「浅度」这类缩写）。不给就留空，不猜。' },
   'roast-date': { type: 'string' },
   price: { type: 'string' },
   capacity: { type: 'string' },
-  'bean-type': { type: 'string' },
+  'bean-type': { type: 'string', description: 'filter / espresso / omni，默认 filter。' },
   flavor: { type: 'string' },
   notes: { type: 'string' },
-  'start-day': { type: 'string', description: 'Optimal start day after roast (default 30).' },
-  'end-day': { type: 'string', description: 'Optimal end day after roast (default 60).' },
+  'start-day': { type: 'string', description: '养豆期结束的天数；默认按烘焙度取（浅 7 / 中 10 / 深 14）。' },
+  'end-day': { type: 'string', description: '赏味期结束的天数；默认按烘焙度取（浅 60 / 中 60 / 深 90）。' },
   'dry-run': { type: 'boolean' },
   format: { type: 'string' },
 } as const;

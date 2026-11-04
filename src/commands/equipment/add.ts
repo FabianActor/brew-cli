@@ -3,6 +3,7 @@ import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
+import { assertAnimationType, ANIMATION_TYPES } from '../../lib/equipmentTypes.ts';
 import { exitForError } from '../../lib/exit.ts';
 import { printJson } from '../../lib/output.ts';
 import { addEquipment } from '../../services/equipment.ts';
@@ -16,7 +17,7 @@ const argsDef = {
   'animation-type': {
     type: 'string',
     default: 'custom',
-    description: 'Type: v60, kalita, origami, clever, custom, espresso.',
+    description: `动画类型：${ANIMATION_TYPES.join(' / ')}（写别的值 App 会退回 V60 动画，所以这里直接报错）。`,
   },
   'has-valve': { type: 'boolean', default: false, description: 'Whether it has a valve (for immersion).' },
   note: { type: 'string', default: '', description: 'Note about the equipment.' },
@@ -37,7 +38,11 @@ export default defineCommand({
 
     const equipmentData = {
       name: args.name,
-      animationType: args['animation-type'] ?? 'custom',
+      animationType: assertAnimationType(
+        typeof args['animation-type'] === 'string' && args['animation-type']
+          ? args['animation-type']
+          : 'custom',
+      ),
       hasValve: args['has-valve'] === true,
       note: typeof args.note === 'string' ? args.note : '',
     };
@@ -70,7 +75,7 @@ export default defineCommand({
       if (args.format === 'json') {
         printJson(result);
       } else {
-        console.log(`Added equipment: ${result.name} (ID: ${String(result.id).slice(0, 8)})`);
+        console.log(`Added equipment: ${result.name} (ID: ${result.id})`);
       }
 
       await logger.success();

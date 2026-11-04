@@ -9,6 +9,8 @@ import {
   componentFromFlags,
 } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { warn } from '../../lib/output.ts';
+import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { updateBean } from '../../services/beans.ts';
 
@@ -61,10 +63,20 @@ export default defineCommand({
     if (name !== undefined) updates.name = name;
     const roasterName = nonEmptyString(args.roaster, '--roaster');
     if (roasterName !== undefined) updates.roaster = roasterName;
-    const roastLevel = nonEmptyString(args['roast-level'], '--roast-level');
-    if (roastLevel !== undefined) updates.roastLevel = roastLevel;
+    const roastLevelRaw = nonEmptyString(args['roast-level'], '--roast-level');
+    if (roastLevelRaw !== undefined) {
+      // 与 bean add 同一套归一化：把「浅度」补成「浅度烘焙」；不是标准值时提醒但仍照写。
+      const normalized = normalizeRoastLevel(roastLevelRaw);
+      if (normalized.warning) warn(normalized.warning);
+      updates.roastLevel = normalized.value;
+    }
     const beanType = nonEmptyString(args['bean-type'], '--bean-type');
-    if (beanType !== undefined) updates.beanType = beanType;
+    if (beanType !== undefined) {
+      if (!BEAN_TYPES.includes(beanType as (typeof BEAN_TYPES)[number])) {
+        exitWithError(`Error: --bean-type must be one of ${BEAN_TYPES.join(', ')}.`, EXIT.USAGE);
+      }
+      updates.beanType = beanType;
+    }
     const flavorRaw = nonEmptyString(args.flavor, '--flavor');
     if (flavorRaw !== undefined) {
       updates.flavor = flavorRaw

@@ -30,6 +30,8 @@ const argsDef = {
   region: { type: 'string', description: '按产区筛（包含匹配，如 "古吉"）。' },
   process: { type: 'string', description: '按处理法筛（包含匹配，如 "日晒"）。' },
   variety: { type: 'string', description: '按品种筛（包含匹配，如 "74158"）。' },
+  country: { type: 'string', description: '按产国筛（包含匹配，如 "Ethiopia"）；产国字段空时回落到产地。' },
+  batch: { type: 'string', description: '按批次筛（包含匹配，如 "Lot 26"）。' },
   roaster: { type: 'string', description: '按烘焙商筛（包含匹配）。' },
   'has-remaining': { type: 'string', description: 'Only beans with remaining > 0: true / false.' },
   format: { type: 'string' },
@@ -72,9 +74,14 @@ export default defineCommand({
       filters.push({ key: 'roaster', op: 'ilike', value: `%${args.roaster}%` });
     }
 
-    // 产区/处理法/品种躺在 data.blendComponents[] 里，PostgREST 的 data->>key 够不着，
+    // 产区/处理法/品种/产国/批次躺在 data.blendComponents[] 里，PostgREST 的 data->>key 够不着，
     // 只能在本地逐条判断（包含匹配，因为库里存的是「古吉 罕贝拉」这种大区+细分）。
-    const componentFilters = (['region', 'process', 'variety'] as const)
+    // --country 额外认 origin：按现在的填写口径，国家是写在产地里的（产国字段多数人没开），
+    // 只认 country 会让「--country 埃塞俄比亚」在正常库里一颗都筛不出来。
+    const COMPONENT_ALIASES: Record<string, readonly string[]> = {
+      country: ['country', 'origin'],
+    };
+    const componentFilters = (['region', 'process', 'variety', 'country', 'batch'] as const)
       .map((key) => ({ key, needle: typeof args[key] === 'string' ? String(args[key]).trim() : '' }))
       .filter((entry) => entry.needle !== '');
 
@@ -82,11 +89,15 @@ export default defineCommand({
       if (componentFilters.length === 0) return true;
       const components = Array.isArray(data.blendComponents) ? data.blendComponents : [];
       return componentFilters.every(({ key, needle }) => {
+        const keys = COMPONENT_ALIASES[key] ?? [key];
         const haystack = components.length > 0 ? components : [data];
         return haystack.some((component) => {
           if (!component || typeof component !== 'object') return false;
-          const value = (component as Record<string, unknown>)[key];
-          return typeof value === 'string' && value.toLowerCase().includes(needle.toLowerCase());
+          const record = component as Record<string, unknown>;
+          return keys.some((field) => {
+            const value = record[field];
+            return typeof value === 'string' && value.toLowerCase().includes(needle.toLowerCase());
+          });
         });
       });
     };

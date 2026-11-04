@@ -3,6 +3,7 @@ import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
+import { assertAnimationType, ANIMATION_TYPES } from '../../lib/equipmentTypes.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
 import { printJson } from '../../lib/output.ts';
 import { updateEquipment } from '../../services/equipment.ts';
@@ -11,7 +12,7 @@ const argsDef = {
   id: { type: 'positional', required: true, description: 'Equipment ID.' },
   name: { type: 'string', description: 'Equipment name.' },
   note: { type: 'string', description: 'Note about the equipment ("" clears it).' },
-  'animation-type': { type: 'string', description: 'Animation type: v60 / kalita / origami / clever / custom / espresso.' },
+  'animation-type': { type: 'string', description: `动画类型：${ANIMATION_TYPES.join(' / ')}。` },
   'has-valve': { type: 'string', description: 'Has valve: true or false.' },
   'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
   format: { type: 'string' },
@@ -33,11 +34,7 @@ export default defineCommand({
     // note 是唯一允许清空（""）的字段
     if (typeof args.note === 'string') updates.note = args.note;
     if (typeof args['animation-type'] === 'string' && args['animation-type']) {
-      const allowed = ['v60', 'kalita', 'origami', 'clever', 'custom', 'espresso'];
-      if (!allowed.includes(args['animation-type'])) {
-        exitWithError(`Error: --animation-type must be one of ${allowed.join(', ')}.`, EXIT.USAGE);
-      }
-      updates.animationType = args['animation-type'];
+      updates.animationType = assertAnimationType(args['animation-type']);
     }
     if (typeof args['has-valve'] === 'string' && args['has-valve']) {
       const v = args['has-valve'].toLowerCase();
@@ -55,7 +52,7 @@ export default defineCommand({
       if (args.format === 'json') {
         printJson({ dryRun: true, action: 'update', id: args.id, updates });
       } else {
-        console.log(`[dry-run] Would update equipment ${args.id.slice(0, 8)}:\n${JSON.stringify(updates, null, 2)}`);
+        console.log(`[dry-run] Would update equipment ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
       await logger.success();
       return;

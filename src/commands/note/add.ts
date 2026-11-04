@@ -4,7 +4,10 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
+import { builtinEquipmentHint, findBuiltinEquipment } from '../../lib/equipmentTypes.ts';
+import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
 import { fetchRecordById } from '../../services/base.ts';
+import { getEquipment } from '../../services/equipment.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
 
 function buildNoteData(args: Record<string, string | boolean | undefined>) {
@@ -16,10 +19,14 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   // 真实字段（优先使用）
   if (typeof args.equipment === 'string' && args.equipment) {
     noteData.equipment = args.equipment;
+    // 内置器具（V60 / 聪明杯 …）不在 custom_equipments 表里，这里直接补上 id，
+    // 自定义器具要等写完库前查到记录再补（见 run()）。
+    const builtin = findBuiltinEquipment(args.equipment);
+    if (builtin) noteData.equipmentId = builtin.id;
   }
   if (typeof args.rating === 'string' && args.rating) {
-    const n = Number(args.rating);
-    if (Number.isFinite(n)) noteData.rating = n;
+    // 0-5 校验：以前只查 isFinite，--rating 9 会直接写进库，App 里显示 9 / 5。
+    noteData.rating = parseRating(args.rating);
   }
   if (typeof args.source === 'string' && args.source) {
     noteData.source = args.source;
@@ -49,12 +56,14 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   if (typeof args.water === 'string' && args.water) {
     params.water = args.water;
   }
+  // App 的 MethodParams.temp 是带单位的字符串（"92°C"）。以前把 --water-temp 直接
+  // Number() 再交给 normalizeNote 拼回去，"92°C" 会变成 "NaN°C"。
+  if (typeof args['water-temp'] === 'string' && args['water-temp']) {
+    params.temp = parseTemperature(args['water-temp']);
+  }
   if (Object.keys(params).length > 0) noteData.params = params;
   if (typeof args['grind-size'] === 'string' && args['grind-size']) {
     noteData.grindSize = args['grind-size'];
-  }
-  if (typeof args['water-temp'] === 'string' && args['water-temp']) {
-    noteData.waterTemp = Number(args['water-temp']);
   }
   if (typeof args.ratio === 'string' && args.ratio) {
     noteData.ratio = args.ratio;
@@ -81,10 +90,10 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
 const argsDef = {
 'bean-id': { type: 'string', required: true },
 method: { type: 'string', required: true },
-equipment: { type: 'string', description: 'Equipment row id (e.g. V60, Espresso).' },
+equipment: { type: 'string', description: '器具：内置 id（V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso）或自定义器具 id，写错会报错。' },
 coffee: { type: 'string', description: '粉量，如 15g（→ params.coffee）。' },
 water: { type: 'string', description: '水量，如 225g（→ params.water）。' },
-  rating: { type: 'string', description: 'Rating 0-5 (authoritative).' },
+  rating: { type: 'string', description: '评分，0-5（超出范围直接报错）。' },
   source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
   notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
   'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
@@ -94,7 +103,7 @@ water: { type: 'string', description: '水量，如 225g（→ params.water）�
   'taste-bitterness': { type: 'string', description: 'Taste bitterness 0-5.' },
   // legacy flat args — auto-normalized to real shape:
   'grind-size': { type: 'string', description: '[legacy] → params.grindSize.' },
-  'water-temp': { type: 'string', description: '[legacy] → params.temp (°C).' },
+  'water-temp': { type: 'string', description: '水温，接受 92 或 92°C（→ params.temp，统一写成 "92°C"）。' },
   ratio: { type: 'string', description: '[legacy] → params.ratio.' },
   'brew-time': { type: 'string', description: '[legacy] mm:ss or seconds → totalTime.' },
   flavor: { type: 'string', description: '[legacy] merged into notes.' },
@@ -139,6 +148,23 @@ export default defineCommand({
       const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
       if (!bean) {
         exitWithError(`Error: bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`, EXIT.USAGE);
+      }
+
+      // equipment 同样是软引用：内置器具在 buildNoteData 里已经认过并写好 equipmentId，
+      // 这里只处理自定义器具 —— 查不到就报错，免得记录指不上任何器具。
+      const equipmentInput =
+        typeof noteData.equipment === 'string' && !noteData.equipmentId
+          ? noteData.equipment.trim()
+          : '';
+      if (equipmentInput) {
+        const custom = await getEquipment(supabase, equipmentInput, config.brewGuideUserId);
+        if (!custom) {
+          exitWithError(
+            `Error: equipment ${equipmentInput} 不存在（或已删除）。${builtinEquipmentHint()}；自定义器具先用 brew-guide equipment list 确认 ID。`,
+            EXIT.USAGE,
+          );
+        }
+        noteData.equipmentId = equipmentInput;
       }
 
       const { id, timestamp } = await upsertNoteRecord(supabase, config, noteData);

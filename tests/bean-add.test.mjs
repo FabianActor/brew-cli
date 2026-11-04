@@ -58,8 +58,13 @@ test('brew-guide bean add --dry-run --format json returns a structured preview',
   assert.equal(payload.dryRun, true);
   assert.equal(payload.bean.name, 'X');
   assert.equal(payload.bean.beanType, 'filter');
-  assert.equal(payload.bean.roastLevel, '浅度烘焙');
-  assert.equal(payload.bean.isInTransit, true);
+  // 没给 --roast-level 就留空：以前会按豆种猜一个（filter → 浅度烘焙），猜错就污染筛选。
+  assert.equal(payload.bean.roastLevel, undefined);
+  // App 里默认是「已到手」，只有在 App 里手动设为在途才是 true。
+  assert.equal(payload.bean.isInTransit, false);
+  // 赏味期按烘焙度取 App 预设；烘焙度为空时按中烘 10/60（以前固定写 30/60）。
+  assert.equal(payload.bean.startDay, 10);
+  assert.equal(payload.bean.endDay, 60);
   assert.deepEqual(payload.bean.blendComponents, [{ origin: 'O', process: 'P' }]);
 });
 

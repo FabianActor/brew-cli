@@ -4,6 +4,7 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
+import { parseStages } from '../../lib/noteInput.ts';
 import { printJson } from '../../lib/output.ts';
 import { getEquipment } from '../../services/equipment.ts';
 import { addMethod } from '../../services/methods.ts';
@@ -16,7 +17,12 @@ const argsDef = {
   ratio: { type: 'string', default: '', description: 'Brew ratio.' },
   'grind-size': { type: 'string', default: '', description: 'Grind size.' },
   temp: { type: 'string', default: '', description: 'Water temperature.' },
-  'stages-json': { type: 'string', description: 'Stages as JSON array.' },
+  'stages-json': {
+    type: 'string',
+    description:
+      '注水步骤 JSON 数组，每个阶段要 label（标题）+ detail（说明），可选 water（如 "30g"）、duration（秒）' +
+      '、pourType、valveStatus。例：[{"label":"闷蒸","water":"30g","duration":30,"detail":"注入 30g 水"}]',
+  },
   'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
   format: { type: 'string' },
 } as const;
@@ -31,17 +37,13 @@ export default defineCommand({
     const logger = createCommandLogger(['method', 'add'], args as Record<string, unknown>);
     assertKnownFlags(args as Record<string, unknown>, argsDef, 'method add');
 
-    let stages: unknown[] = [];
-    if (typeof args['stages-json'] === 'string' && args['stages-json']) {
-      try {
-        stages = JSON.parse(args['stages-json']);
-      } catch {
-        exitWithError('Error: --stages-json must be a valid JSON array.', EXIT.USAGE);
-      }
-      if (!Array.isArray(stages)) {
-        exitWithError('Error: --stages-json 必须是数组，例如 \'[{"name":"闷蒸","water":30}]\'。', EXIT.USAGE);
-      }
-    }
+    // 阶段结构按 App 的 Stage（`brew-guide/src/lib/core/config.ts:36-47`）校验：
+    // label/detail 必有、water 是字符串、duration 是秒数。只查 Array.isArray 时，
+    // 用示例 `[{"name":"闷蒸","water":30}]` 写进去，App 里这一段的标题是空的。
+    const stages =
+      typeof args['stages-json'] === 'string' && args['stages-json']
+        ? parseStages(args['stages-json'])
+        : [];
 
     const methodData = {
       equipmentId: args['equipment-id'],
@@ -91,7 +93,7 @@ export default defineCommand({
       if (args.format === 'json') {
         printJson(result);
       } else {
-        console.log(`Added method: ${result.name} (ID: ${String(result.id).slice(0, 8)})`);
+        console.log(`Added method: ${result.name} (ID: ${String(result.id)})`);
       }
 
       await logger.success();
