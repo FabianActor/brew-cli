@@ -226,9 +226,11 @@ npm link                      # 改完只想本地用：build 一次就生效
 
 改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
 
-> **首次发布**（包还不存在时）：本机 `npm login` 后直接 `npm publish --access public`，npm 会要一次 2FA 验证码。发完到 npmjs.com → 包 → Settings → Trusted publishing 里登记 GitHub Actions：user `FabianActor`、repo `brew-cli`、workflow `publish.yml`，勾上允许 `npm publish`。这个配置**两天内必须成功发布一次**，否则会过期作废。
+> **发布**：改 `package.json` 版本号 → 提交 → `git tag v0.2.x && git push origin v0.2.x`。CI 跑 typecheck / build / test 后，用 npm trusted publishing（OIDC）直接发布并自动附 provenance — **不需要任何 npm token**。
 >
-> **之后的版本**：改 `package.json` 版本号 → `git tag v0.2.x && git push origin v0.2.x`。CI 跑 typecheck / build / test，然后用 OIDC 直接发布并自动带 provenance——**不需要任何 npm token**（GitHub 从 2026-08 起限制绕过 2FA 的 token，2027-01 起连直接发布也不给用了）。
+> 发布链的前置条件（一次性）：npm 包里登记 trusted publisher（user `FabianActor`、repo `brew-cli`、workflow `publish.yml`），Publishing access 设为「Require 2FA and disallow tokens」。配置建好后**两天内必须成功发布一次**，否则作废。`0.2.0` 是手动发的一次性引导，`0.2.1` 起全部走 tag + OIDC。
+>
+> 想验证包内容但不发布：`npm pack --dry-run`。
 >
 > 本地只想验证包内容用 `npm pack --dry-run`。
 
