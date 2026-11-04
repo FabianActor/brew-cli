@@ -26,7 +26,6 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 | `bean add` 新增咖啡豆 | `references/bean-add.md` |
 | `note add` 新增冲煮记录 | `references/note-add.md` |
 | `method add` 新增冲煮方案 | `references/method-add.md` |
-| 图片导入豆子时 OCR 失败 | `references/bean-image-import-fallback.md` |
 
 其他命令（list / get / update / delete / consume / equipment add 等）规则简单，直接按下表使用即可。
 

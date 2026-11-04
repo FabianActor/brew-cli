@@ -51,7 +51,7 @@ Important: the CLI mostly treats `data` as the source of truth and only reads a 
 
 ## Tables used by this repo
 
-The valid table names in generic tools are defined in `src/lib/tables.ts`:
+五张表都由 CLI 读写：
 
 - `coffee_beans`
 - `brewing_notes`
