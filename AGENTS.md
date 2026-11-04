@@ -44,7 +44,7 @@ src/
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters
   tools/               # upsertBean.ts / upsertNote.ts — thin adapters over services
-  lib/                 # args exit output query summary weights ids blendComponents crudCommands timestamps toolResults
+  lib/                 # args exit output query summary weights ids blendComponents crudCommands timestamps toolResults roast noteInput equipmentTypes
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)

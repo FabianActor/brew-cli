@@ -17,6 +17,8 @@ brew-guide --version
 
 包名是 `@fabianactor/brew-cli`（`brew-cli` 在 npm 上被人下架过，名字锁死了，用不了），装完的命令叫 `brew-guide`（跟它操作的那款应用同名）。不想全局装就用 `npx @fabianactor/brew-cli bean list`。
 
+macOS 上用系统自带的 Node 装可能会 `EACCES: permission denied` —— 那是系统目录不给写，别用 `sudo`，改用 nvm / fnm 这类版本管理器，或者把前缀指到用户目录：`npm install -g @fabianactor/brew-cli --prefix ~/.npm-global`（之后把 `~/.npm-global/bin` 加进 `PATH`）。
+
 从源码装：
 
 ```bash
@@ -95,8 +97,9 @@ $$;
 # 最近加的 10 款
 brew-guide bean list --limit 10
 
-# 按产区 / 处理法 / 品种找（包含匹配，--region 古吉 能命中「古吉 罕贝拉」）
+# 按产区 / 处理法 / 品种 / 产国 / 批次找（包含匹配，--region 古吉 能命中「古吉 罕贝拉」）
 brew-guide bean list --region 古吉 --has-remaining true
+brew-guide bean list --country Ethiopia --batch "Lot 26"
 
 # 看一款的完整字段
 brew-guide bean get bean_xxx
@@ -109,7 +112,7 @@ brew-guide roasters
 
 > **先在 App 里打开这些字段**：设置 → 咖啡豆 → 咖啡豆字段，勾选 烘焙商、产地、产区、庄园、处理站、海拔、处理法、品种。没勾的字段在应用里看不到，等于白写。
 >
-> 两个当前限制：**产国与产地在后端是同一个字段**（开产国就得把国家从产地搬走，否则同一信息存两处）；**批次字段暂未适配**。
+> 一个当前限制：**产国与产地在后端是同一个字段**（开产国就得把国家从产地搬走，否则同一信息存两处）。批次写在 `blendComponents[0].batch`，App 里勾了批次就能看到。
 
 ```bash
 brew-guide bean add \
@@ -120,8 +123,9 @@ brew-guide bean add \
   --roast-level "浅度烘焙" --capacity 100 --price 128
 ```
 
-拼配用可重复的 `--component`：
+烘焙度不给就留空（以前会按豆种猜一个，猜错就污染 App 的筛选）。`--start-day` / `--end-day` 不给时按烘焙度取 App 的同一套预设：浅烘 7/60、中烘 10/60、深烘 14/90。
 
+拼配用可重复的 `--component`：
 ```bash
 brew-guide bean add --name "三重奏" --roaster "TRIOON" \
   --component "region=卡哈马卡;process=水洗" \
@@ -146,13 +150,15 @@ brew-guide note list --from 2026-10-01 --to 2026-10-31 --min-rating 4
 brew-guide bean consume bean_xxx --amount 15
 ```
 
+`--rating` 只收 0-5（超范围直接报错）；`--water-temp` 收 `92` 或 `92°C`，一律写成 `92°C`；`--equipment` 会校验，内置 V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso 直接认，自定义器具要写 `equipment list` 里的 ID。
+
 ### 4. 管器具和配方
 
 ```bash
 brew-guide equipment list
 brew-guide equipment add --name "V60" --id "V60" --animation-type v60
 brew-guide method list
-brew-guide method add --name "三段式" --equipment-id "V60" --stages-json '[{"label":"焖蒸","water":"30g","duration":15}]'
+brew-guide method add --name "三段式" --equipment-id "V60" --stages-json '[{"label":"焖蒸","water":"30g","duration":15,"detail":"注入 30g 水，等 15 秒"}]'
 ```
 
 `--id` 撞已有器具会报错停下，确认要替换才加 `--force`。
@@ -173,7 +179,7 @@ brew-guide backup --out "D:\bk\brew.json"
 | 命令 | 干什么 |
 | --- | --- |
 | `bean add / get / update / delete / consume` | 咖啡豆：新增、详情、修改、软删、扣余量 |
-| `bean list` | 列表，支持烤度、豆种、烘焙商、产区、处理法、品种、有无余量筛选 |
+| `bean list` | 列表，支持烤度、豆种、烘焙商、产区、处理法、品种、产国、批次、有无余量筛选 |
 | `note add / get / update / delete` | 冲煮记录：新增、详情、修改、软删 |
 | `note list` | 列表，支持器具、方法、豆子、评分、日期区间筛选 |
 | `equipment add / get / update / delete / list` | 器具 |

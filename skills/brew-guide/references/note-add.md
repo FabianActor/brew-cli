@@ -11,8 +11,8 @@
 
 **真实字段（优先使用）**：
 
-- `--equipment <id>` → `data.equipment`（equipment 行 ID，例如 `V60`、`Espresso`）
-- `--rating 0-5`      → `data.rating`（接受 `3.5` 这类小数，压过 `--score/20`）
+- `--equipment <id>` → `data.equipment` + `data.equipmentId`（内置器具 `V60`、`CleverDripper`、`Kalita`、`Origami`、`Orea`、`Sinloy`、`Espresso` 直接认，中文名如「聪明杯」也认；自定义器具必须是 `equipment list` 里的 ID，查不到直接 exit 2）
+- `--rating 0-5`      → `data.rating`（接受 `3.5` 这类小数，压过 `--score/20`；只收 0–5，`--rating 9` 会直接报错，不写库）
 - `--source <tag>`   → `data.source`（例 `capacity-adjustment`、`quick-decrement`）
 - `--notes "..."`    → `data.notes`（`--memo` / `--flavor` 也会合并进同一字段）
 - `--total-time 150` → `data.totalTime`（秒，压过 `--brew-time`）
@@ -21,7 +21,7 @@
 **老字段（向后兼容，自动转换到真实形状）**：
 
 - `--grind-size`  → `params.grindSize`
-- `--water-temp`  → `params.temp`（拼 `°C`）
+- `--water-temp`  → `params.temp`（统一写成 `92°C`；接受 `92`、`92°C`、`88 ℃`、`93.5C` 这些写法，写不出数字就报错，不再出现 `NaN°C`）
 - `--ratio`       → `params.ratio`
 - `--coffee 15g`  → `params.coffee`（粉量原文照存，不换算）
 - `--water 225g`  → `params.water`（水量原文照存，不换算）

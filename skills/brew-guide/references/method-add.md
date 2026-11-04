@@ -56,7 +56,8 @@ brew-guide equipment list --format json
 
 ### 实际兼容性说明
 
-- 当前 CLI / 存储层对 stage 的校验比文档宽松：**非 `wait` 步骤没有 `duration` 也能成功写入**。
+- `--stages-json` 现在会逐段校验（`src/lib/noteInput.ts` 的 `parseStages`）：每段必须有 `label`，`detail` 缺了补空字符串，`name` → `label`、`time` → `duration` 自动兼容，`water` 数字会转成字符串，`duration` 必须是有限非负数，`valveStatus` 只能是 `open` / `closed`。缺 `label` 直接 exit 2 并指出是第几段。
+- 非 `wait` 步骤没有 `duration` 仍然可以写入。
 - 所以，图片只给了总时长、阶段结束点或只给了注水量时，可以：
   - 对有明确时间点的 stage 写 `duration`
   - 对没有明确单段时长的 stage **省略 `duration`**，不要硬猜

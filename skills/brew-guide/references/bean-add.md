@@ -30,7 +30,9 @@
 - `flavor`
 - `notes`
 
-> `startDay / endDay` 用 `--start-day` / `--end-day` 传，不传则固定 `30 / 60`。
+> `startDay / endDay` 用 `--start-day` / `--end-day` 传。不传时按烘焙度取 App 的同一套预设：浅烘 `7 / 60`、中烘 `10 / 60`、深烘 `14 / 90`；烘焙度也没给时按中烘 `10 / 60`。
+>
+> `--roast-level` 接受缩写（`浅度` → `浅度烘焙`）；不是 App 的标准值时只警告、照写，但 `bean list --roast-level` 是精确匹配，这颗豆可能筛不出来。**不给就不填**——CLI 不会按豆种猜烘焙度。
 
 ## 1.5 字段拆分口径（Fabian 定，2026-11-04）
 
@@ -111,9 +113,9 @@ brew-guide roasters --format json
 
 - 如果豆子还没收到，可以直接新增
 - 在途豆允许没有 `roastDate`
-- 没有 `roastDate` 时，按在途豆处理
 - agent 不要因为缺少 `roastDate` 就阻止创建
 - 但仍要尽量收集 `name / roaster / origin / process`
+- ⚠️ CLI **没有** `--in-transit`（也还不能建生豆）：`bean add` 一律写 `isInTransit: false`，跟 App 的默认值一致。以前缺 `roastDate` 时会自动打成「在途」，豆子卡片上就挂着「在途」标记——那个行为已经去掉。要标在途，让用户在 App 里改。
 
 在途豆示例：
 

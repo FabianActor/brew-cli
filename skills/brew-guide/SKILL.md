@@ -43,8 +43,8 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." --roaster "..." --origin "..." --process "..." [--region ...] [--estate ...] [--processing-station ...] [--altitude ...] [--variety ...] [--batch ...] [--start-day 30] [--end-day 60] [options] [--dry-run]`；拼配加可重复的 `--component "origin=…;percentage=33"` |
-| `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--roaster "MAME"] [--region 古吉] [--process 日晒] [--variety 74158] [--has-remaining true] [--format json]`（产区/处理法/品种是包含匹配，`--region 古吉` 命中「古吉 罕贝拉」） |
+| `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." --roaster "..." --origin "..." --process "..." [--region ...] [--estate ...] [--processing-station ...] [--altitude ...] [--variety ...] [--batch ...] [--roast-level "浅度烘焙"] [--start-day 7] [--end-day 60] [options] [--dry-run]`；拼配加可重复的 `--component "origin=…;percentage=33"`（烘焙度不给就留空，不猜；`--start-day/--end-day` 不给时按烘焙度取浅 7/60、中 10/60、深 14/90） |
+| `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--roaster "MAME"] [--region 古吉] [--process 日晒] [--variety 74158] [--country 埃塞俄比亚] [--batch "Lot 26"] [--has-remaining true] [--format json]`（产区/处理法/品种/产国/批次是包含匹配，`--region 古吉` 命中「古吉 罕贝拉」；产国字段空时 `--country` 回落到产地） |
 | `bean get` | 详情 | `brew-guide bean get <id> [--format json]` |
 | `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--region "..."] [--processing-station "..."] [--altitude "..."] [--process "..."] [--variety "..."] [--estate "..."] [--batch "..."] [--percentage 33] [--component-index 2] [--component "origin=…;percentage=50"] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--dry-run]`（成分字段合并进 `--component-index` 指定的成分，默认第 1 个；`--component` 整组替换）|
 | `bean delete` | 软删除 | `brew-guide bean delete <id> [--dry-run]` |
@@ -54,7 +54,7 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]`（`--bean-id` 必须指向存在的活豆，否则直接报错） |
+| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--water-temp 92] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]`（`--bean-id` 和 `--equipment` 都会校验：豆子要在、器具要是内置 id 或 `equipment list` 里的 ID；`--rating` 只收 0–5；`--water-temp` 收 `92` 或 `92°C`，统一写 `92°C`） |
 | `note list` | 列出 | `brew-guide note list [--limit N] [--equipment V60] [--method 日式] [--bean-id "..."] [--min-rating 3.5] [--from 2026-01-01] [--to 2026-12-31] [--format json]`（日期含当天，`--from` 晚于 `--to` 直接报错） |
 | `note get` | 详情 | `brew-guide note get <id> [--format json]` |
 | `note update` | 更新 | `brew-guide note update <id> --rating 4 --notes "..." [--equipment "V60"] [--total-time 150] [--source tag] [--ratio "1:15"] [--grind-size "..."] [--water-temp 92] [--coffee "15g"] [--water "225g"] [--taste-body 4] [--dry-run]`（`--rating` / `--taste-*` 0–5；taste / params 部分更新与现有值合并）|
@@ -78,7 +78,7 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `method add` | 新增（见 `references/method-add.md`） | `brew-guide method add --equipment-id "..." --name "..." [options] [--dry-run]` |
+| `method add` | 新增（见 `references/method-add.md`） | `brew-guide method add --equipment-id "..." --name "..." [--coffee 15g --water 225g --temp "92°C"] [--stages-json '[{"label":"闷蒸","water":"30g","duration":30,"detail":"注入 30g 水"}]'] [--dry-run]`（每个阶段必须有 `label` 和 `detail`；`--equipment-id` 要在） |
 | `method list` | 列出 | `brew-guide method list [--equipment-id "..."] [--format json]` |
 | `method get` | 详情 | `brew-guide method get <id> [--format json]` |
 | `method update` | 更新名称/参数 | `brew-guide method update <id> [--name "..."] [--coffee "15g"] [--water "225g"] [--ratio "1:15"] [--grind-size "..."] [--temp "92°C"] [--dry-run]` |
