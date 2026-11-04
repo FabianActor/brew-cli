@@ -11,17 +11,18 @@ jobs:
     # Windows 是本地主力平台，macOS 是真实用户的另一大平台：两边都跑，
     # 免得 Windows 专属的 platform 分支和 POSIX 分支只被一种系统验过。
     #
-    # macOS 特意用 Intel 镜像（macos-15-intel）而不是 macos-latest：
-    # arm64 的 GitHub-hosted 池子经常排队十几分钟甚至拿不到机器
-    # （annotation: "jobs targeting macOS arm64 runners may experience longer queue times"），
-    # Intel 是另一条队列。本项目是纯 JS（无原生模块），x64 足以验证 macOS 上能跑。
+    # macOS 用原生 arm64 镜像（macos-latest）：GitHub-hosted 的 macOS 池子
+    # 偶尔会长时间排队甚至拿不到机器（annotation: "The job was not acquired
+    # by Runner of type hosted even after multiple attempts"）。试过换 Intel 镜像
+    # (macos-15-intel) 绕开，同样排队超过 9 分钟，所以还是用用户真正跑的那条。
+    # 遇到这个失败直接 rerun 即可：是容量问题，与代码无关。
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - windows-latest
-          - macos-15-intel
+          - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
