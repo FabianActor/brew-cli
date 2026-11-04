@@ -1,20 +1,59 @@
 # brew-guide-cli
 
-独立的 Citty 命令行工具，让你可以直接操作 [brew-guide](https://github.com/chuthree/brew-guide) 的 Supabase 数据同步表。
+在终端里管理 [brew-guide](https://github.com/chuthree/brew-guide) 的数据：咖啡豆、冲煮记录、器具与配方、烘焙商，直接读写它用的 Supabase 表。
 
-## 简介
+```bash
+brew-guide bean list --limit 5
+brew-guide note add --bean-id bean_xxx --method "V60" --rating 4.5
+```
 
-本项目已从原先的 OpenClaw 工具插件重构为独立的命令行工具。你可以用它在终端上直接管理咖啡豆 (bean)、冲煮记录 (note) 和查看烘焙商 (roasters) 列表。
+数据和应用里看到的是同一份——手机上刷新就能看到你在终端里记的那一杯。
 
-## 前置条件
+---
 
-- Node.js >= 18
-- 一个已初始化 brew-guide schema 的 Supabase 项目
-- **【必要配置】** 需要在 Supabase 数据库里创建一个函数：`public.get_all_roasters()`，它会从：
-   - `public.coffee_beans.data->>'roaster'`
-   - `public.brewing_notes.data->>'roaster'`
-里取值、过滤空值，并做去重后返回 text 列表。
+## 安装
+
+需要 Node.js >= 18。
+
+```bash
+npm install -g brew-guide-cli
+```
+
+装完 `brew-guide` 就在 PATH 里了。
+
+想装内嵌的 Agent skill（让 AI 助手知道怎么用这套命令）：
+
+```bash
+npx skills add github.com/FabianActor/brew-guide-cli -y -g
+```
+
+## 配置
+
+```bash
+brew-guide init
+```
+
+会依次问三样东西：
+
+| 项 | 说明 |
+| --- | --- |
+| Supabase URL | 你的项目地址，结尾的 `/` 会自动去掉 |
+| Service Role Key | 输入时不回显。如果表已对 `anon` 放开（brew-guide 自带 schema 就是 `USING (true)` 宽 RLS），填 publishable / anon key 也能用，权限边界完全由 RLS 决定 |
+| User ID | 同步用的用户标识，默认 `default_user` |
+
+配置写到 `~/.config/brew-guide/config.json`，想换位置就设 `BREW_GUIDE_CONFIG_PATH`。
+
+> **前置条件**：库里需要有 `public.get_all_roasters()` 函数（`roasters` 命令靠它汇总烘焙商）。brew-guide 自带的 schema 里不含这个函数，自己项目第一次用要先建。
+
+<details>
+<summary>建函数的 SQL</summary>
+
 ```sql
+create or replace function public.get_all_roasters()
+returns table (roaster text)
+language sql
+stable
+as $$
   select distinct trim(both from r.roaster) as "roaster"
   from (
     select jsonb_extract_path_text("data", 'roaster') as roaster
@@ -30,128 +69,115 @@
   where r.roaster is not null
     and btrim(r.roaster) <> ''
   order by 1;
+$$;
 ```
+</details>
 
-## 安装
+想换配置就跑 `brew-guide init`，或直接改那个 JSON。
 
-你可以通过 npm 直接将其安装到全局环境中：
+---
+
+## 四个常用场景
+
+### 1. 查豆
 
 ```bash
-npm install -g brew-guide-cli
-```
-
-安装后，`brew-guide` 命令即可在终端中全局可用。
-
-## 直接 Agent 对话配置
-
-```txt
-帮我通过以下命令安装`brew-guide-cli`: `npm install -g brew-guide-cli` ，然后通过以下命令安装相关 skills `npx skills add github.com/FabianActor/brew-guide-cli -y -g` 。安装完成后，根据`https://github.com/FabianActor/brew-guide-cli/blob/master/README.md`进行openclaw里面的所有配置。
-```
-
-
-## 初始化配置
-
-首次使用前，需要配置 Supabase 连接信息：
-
-```bash
-brew-guide init
-```
-
-执行后会交互式提示输入以下信息：
-1. **Supabase URL**: 你的 Supabase 项目 URL (例如: `https://your-project.supabase.co`)，结尾的 `/` 会自动去掉
-2. **Service Role Key**: 你的 Supabase service role 密钥（输入时不回显）。若你的表已经对 `anon` 角色放开读写（`brew-guide` 自带的 schema 就是 `USING (true)` 宽 RLS），填 publishable / anon key 同样能用，此时权限边界完全由 RLS 决定
-3. **User ID**: 同步记录到 brew-guide 时的用户标识 (默认值为 `default_user`)
-
-> 默认情况下，配置会保存在 `~/.config/brew-guide/config.json`。你也可以通过环境变量 `BREW_GUIDE_CONFIG_PATH` 来自定义配置文件路径。
-
-## CLI 工具说明
-
-CLI 提供了以下层级的命令：
-
-### 管理咖啡豆 (`bean`)
-
-```bash
-# 查看帮助
-brew-guide bean --help
-
-# 1. 列表查询咖啡豆
+# 最近加的 10 颗
 brew-guide bean list --limit 10
 
-# 2. 添加咖啡豆（至少一个成分要带 origin 和 process）
-brew-guide bean add --name "Yirgacheffe" --roaster "Tim Wendelboe" --origin "Ethiopia" --process "Washed"
+# 按产区 / 处理法 / 品种找（包含匹配，--region 古吉 能命中「古吉 罕贝拉」）
+brew-guide bean list --region 古吉 --has-remaining true
 
-# 2b. 结构化成分字段（产区 / 庄园 / 处理站 / 海拔 / 批次）
-brew-guide bean add --name "罕贝拉 日晒" --roaster "MAME" \
-  --country "埃塞俄比亚" --region "古吉 罕贝拉" --estate "Buku Sayisa" \
-  --process "日晒" --variety "原生种" --altitude "2350-2460m"
+# 看一颗的完整字段
+brew-guide bean get bean_xxx
 
-# 2c. 拼配：--component 可重复
-brew-guide bean add --name "三重奏" --roaster "TRIOON" \
-  --component "region=卡哈马卡;process=水洗" --component "region=库斯科;process=日晒;percentage=40"
-```
-
-> **可选参数说明**：除成分字段外，还可提供 `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--flavor`, `--notes` 完善咖啡豆信息。
-> 成分字段（`--origin/--country/--region/--estate/--processing-station/--process/--variety/--altitude/--batch/--percentage`）作用于第一个成分；`update` 时可用 `--component-index N` 指定第几个成分（从 1 开始），或 `--component` 整组替换。
-> `bean add` / `bean update` 会校验参数名：拼错的 flag 直接 `exit 2` 并列出可用参数，不会静默忽略。
-> `bean list` 支持筛选：`--roast-level`, `--bean-type`, `--roaster`, `--region`, `--process`, `--variety`, `--has-remaining true|false`。产区/处理法/品种是**包含匹配**（`--region 古吉` 能命中「古吉 罕贝拉」）。
-
-### 管理冲煮记录 (`note`)
-
-```bash
-# 查看帮助
-brew-guide note --help
-
-# 1. 列表查询冲煮记录
-brew-guide note list --limit 10
-
-# 2. 添加冲煮记录 (需基于 bean-id 关联)
-brew-guide note add --bean-id "YOUR_BEAN_ID" --method "V60" 
-```
-
-> **可选参数说明**：`--notes`, `--rating`, `--total-time`, `--source`, `--equipment`, `--taste-body/--taste-acidity/--taste-sweetness/--taste-bitterness` 为当前真实字段；
-> `--coffee`, `--water`, `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 是兼容旧脚本的别名，会被归一到真实字段（`--coffee/--water` 进 `params.coffee` / `params.water`）。
-> `--bean-id` 会在写入前校验豆子是否存在；未声明的 flag 会 `exit 2` 并列出可用参数。
-> `note list` 支持 `--equipment`, `--method`, `--bean-id`, `--min-rating`, `--from`, `--to`（日期可用 `YYYY-MM-DD` 或 ISO 时间，含当天）。
-
-### 备份 (`backup`)
-
-```bash
-# 导出全部表到本地 JSON（默认 brew-guide-backup-<timestamp>.json）
-brew-guide backup
-
-# 指定路径；--include-deleted false 只导未软删的行
-brew-guide backup --out "D:\backups\brew-2026-11.json"
-```
-
-导出 `coffee_beans`、`brewing_notes`、`custom_equipments`、`custom_methods`、`user_settings` 的原始行（含 `deleted_at`），可直接当离线备份。
-
-### 查看烘焙商 (`roasters`)
-
-```bash
-# 查看帮助
-brew-guide roasters --help
-
-# 列出所有已经录入系统的不同烘焙商名称
+# 还剩什么烘焙商
 brew-guide roasters
 ```
 
+### 2. 加一颗豆
+
+```bash
+brew-guide bean add \
+  --name "罕贝拉 日晒" --roaster "MAME" \
+  --country "埃塞俄比亚" --region "古吉 罕贝拉" \
+  --estate "Buku Sayisa" --process "日晒" \
+  --variety "原生种" --altitude "2350-2460m" \
+  --roast-level "浅度烘焙" --capacity 100 --price 128
+```
+
+拼配用可重复的 `--component`：
+
+```bash
+brew-guide bean add --name "三重奏" --roaster "TRIOON" \
+  --component "region=卡哈马卡;process=水洗" \
+  --component "region=库斯科;process=日晒;percentage=40"
+```
+
+字段怎么拆（产地/产区/庄园/处理站怎么分工）见 `skills/brew-guide/references/bean-add.md`。
+
+### 3. 记一杯
+
+```bash
+# 记完自动扣余量（--with-note 会连记录一起写）
+brew-guide note add --bean-id bean_xxx --method "V60" \
+  --equipment "冰瞳 B75" --rating 4.5 --notes "莓果，尾段偏甜" \
+  --coffee 15g --water 225g --water-temp 92
+
+# 翻最近的记录，按日期/评分筛
+brew-guide note list --limit 10
+brew-guide note list --from 2026-10-01 --to 2026-10-31 --min-rating 4
+
+# 只想扣粉量、不记记录
+brew-guide bean consume bean_xxx --amount 15
+```
+
+### 4. 管器具和配方
+
+```bash
+brew-guide equipment list
+brew-guide equipment add --name "V60" --id "V60" --animation-type v60
+brew-guide method list
+brew-guide method add --name "三段式" --equipment-id "V60" --stages-json '[{"label":"焖蒸","water":"30g","duration":15}]'
+```
+
+`--id` 撞已有器具会报错停下，确认要替换才加 `--force`。
+
+### 备份
+
+```bash
+brew-guide backup                       # 默认 brew-guide-backup-<timestamp>.json
+brew-guide backup --out "D:\bk\brew.json"
+```
+
+导出 `coffee_beans` / `brewing_notes` / `custom_equipments` / `custom_methods` / `user_settings` 的原始行（含软删），可以直接当离线快照。**批量改库之前先跑一次。**
+
+---
+
+## 命令总览
+
+| 命令 | 干什么 |
+| --- | --- |
+| `bean add / get / update / delete / consume` | 咖啡豆：新增、详情、修改、软删、扣余量 |
+| `bean list` | 列表，支持烤度、豆种、烘焙商、产区、处理法、品种、有无余量筛选 |
+| `note add / get / update / delete` | 冲煮记录：新增、详情、修改、软删 |
+| `note list` | 列表，支持器具、方法、豆子、评分、日期区间筛选 |
+| `equipment add / get / update / delete / list` | 器具 |
+| `method add / get / update / delete / list` | 冲煮配方（`--stages-json` 传分段注水步骤） |
+| `roasters` | 库里出现过的烘焙商 |
+| `backup` | 整库导出成 JSON |
+| `init` | 写配置 |
+
+每个命令的完整参数用 `--help` 看，例如 `brew-guide bean add --help`。
+
 ## 全局选项
 
-无论是 `add` 还是查询列表，大多数命令支持以下可选修饰参数：
+| 选项 | 行为 |
+| --- | --- |
+| `--format json` | 输出紧凑单行 JSON，走 stdout；警告、进度、错误一律走 stderr，可以直接 `| jq` |
+| `--dry-run` | 写入类命令打印将要发送的载荷，不发请求 |
 
-- `--format json`: 将输出内容严格格式化为 JSON 字符串。不仅方便终端查看，且非常适合用于后续脚本处理或其他自动化工具读取。JSON 走 stdout 且是单行紧凑格式；警告、进度、错误一律走 stderr，方便 `| jq` 或管道。
-- `--dry-run`: 仅可用在写入操作中（如 `add`），终端会打印将插入到 Supabase 中的载荷数据，但不发送真实网络请求。
-
-## 数据约束
-
-本工具严格遵守 brew-guide 的 Supabase 原则和同步模型：
-- 本工具为独立 CLI 工具，原 OpenClaw 相关的插件依赖已被剥离。
-- 所有数据挂载至统一的 `user_id`（由 `init` 配置）。
-- 写入数据时自动维护 `created_at`（首次插入）和 `updated_at`（每次变更）。
-- 业务数据包裹并存放在对应表的 `data` JSONB 字段下。
-- 支持 UPSERT 功能（通过 `onConflict 'id,user_id'` 限制条件），不提供直接的彻底物理删除。
-- **写入会复活软删记录**：所有写入都带 `deleted_at: null`，对一条已软删的 `id` 执行 `add`/`update` 会让它重新出现在应用里。
-- 软删只是把 `deleted_at` 填上，行本身仍在，`list` 类命令默认只读 `deleted_at is null` 的行。
+**参数名写错会直接 `exit 2` 并列出可用参数**，不会静默忽略。
 
 ## 退出码
 
@@ -159,62 +185,39 @@ brew-guide roasters
 | --- | --- |
 | 0 | 成功 |
 | 1 | 运行时失败（记录不存在、写入被拒等） |
-| 2 | 参数用法错误（缺必填、取值非法、空字符串） |
+| 2 | 参数用法错误（缺必填、取值非法、空字符串、拼错的 flag） |
 | 64 | 配置缺失或非法（先跑 `brew-guide init`） |
 | 65 | 网络 / Supabase 请求失败 |
 
-## 开发测试
+## 数据模型备注
+
+- 业务字段都在各表的 `data` JSONB 里；`data` 里的时间值是**毫秒数**，不是 ISO 字符串。
+- 产地写在 `data.blendComponents[]`；写入时扁平字段（`--origin` 等）会被合并进第一个成分并从顶层删除。
+- 主键是 `(id, user_id)`，写入走 upsert，没有物理删除。
+- **写入会复活软删记录**：所有写入都带 `deleted_at: null`，对一条已软删的 `id` 再 `add`/`update` 会让它重新出现。
+- `list` 默认只读 `deleted_at is null` 的行。
+
+更细的约定见 [docs/supabase.md](docs/supabase.md)。
+
+## 开发
 
 ```bash
-# 安装依赖
 npm install
-
-# 运行本地开发调试
-npm run dev -- init
-npm run dev -- bean list
-
-# 类型检查与打包
-npm run typecheck
-npm run build
-
-# 监听源码变更并自动重新构建 dist/
-npm run build:watch
+npm run dev -- bean list      # 直接跑源码
+npm run typecheck             # tsc --noEmit
+npm test                      # typecheck + node --test
+npm run build                 # tsup → dist/
+npm link                      # 改完只想本地用：build 一次就生效
 ```
 
-### 在 OpenClaw 中本地测试
+改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
 
-如果你正在修改此 CLI 工具，可以通过以下步骤直接在本地 Agent (如 Gemini/OpenClaw) 中测试你的改动：
+### 发布
 
-1. **链接本地 CLI 命令**：
-   ```bash
-   npm run build
-   npm link
-   ```
-   *这会将当前项目的构建输出链接到全局 `brew-guide` 命令。由于命令已全局就绪，后续每次代码更改后只需再次运行 `npm run build` 即可生效。*
-
-2. **安装并链接本地 Skill**：
-   将本项目的本地 skill 挂载到 OpenClaw 中：
-   ```bash
-   npx skills add ./skills/brew-guide -g -y
-   ```
-   *这能确保你的 Agent 获悉并使用本项目内嵌的最新的 SKILL 文件和操作逻辑。*
-
-3. **进行对话联调**：
-   你可以重启 Agent 会话进行测试要求，例如：“调用 brew-guide 查询我最近添加的咖啡豆”，并验证 Agent 能够正常触发本地二进制文件进行处理并联调。
-
-## 发布更新流程
-
-本项目已配置 GitHub Actions 自动发布流程。当你想发布新版本到 npm 时，请按以下步骤操作：
-
-1. 在本地通过 npm 更新版本号并生成对应的 Git Tag：
-   ```bash
-   npm version patch  # 可以依据涉及变动大小替换为 minor 或 major
-   ```
-2. 将代码与 tag 提交推送到远端：
-   ```bash
-   git push origin master --tags
-   ```
-推送 tag 之后，GitHub Actions 将会自动执行安全检查并将构建更新发布到 npm Registry。
+```bash
+npm version minor             # 改版本 + 打 tag
+git push origin master --tags # tag 触发 GitHub Actions 发布到 npm
+```
 
 ## License
 
