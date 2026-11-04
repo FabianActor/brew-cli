@@ -8,6 +8,10 @@
 **回滚**：`npm install -g @fabianactor/brew-cli@<版本号>`
 **查当前版本**：`brew-guide --version`
 
+每条都写了**旧行为是什么**——只看「已修复」判断不了自己的数据有没有受影响。破坏性变更单列一段，升级前扫一眼就够。
+
+> `0.2.0` 当时是手动发布的一次性引导，没有打 tag，所以它的对比链接指向 npm 页面；`0.2.1` 起每个版本都有 `v*` tag。
+
 ---
 
 ## [未发布]
@@ -60,7 +64,27 @@
 npm install -g @fabianactor/brew-cli@0.2.2
 ```
 
-这次没有数据结构变更，不用重新跑 `init`，也不用迁移库。老数据里如果有 `isInTransit: true`、`startDay: 30` 的豆子，值得自己在 App 里看一眼是不是真想要这个值。
+这次没有数据结构变更，不用重新跑 `init`，也不用迁移库。
+
+### 旧数据要不要管
+
+`bean list --format json` 的摘要里就带 `isInTransit`、`startDay`、`endDay`，可以直接查（库小的时候最省事）：
+
+```powershell
+# 被旧版本误标成在途的豆子
+brew-guide bean list --limit 200 --format json | ConvertFrom-Json |
+  Where-Object { $_.isInTransit } | Select-Object name
+
+# 赏味期还是旧默认值 30 的豆子
+brew-guide bean list --limit 200 --format json | ConvertFrom-Json |
+  Where-Object { $_.startDay -eq 30 } | Select-Object name, startDay, endDay
+```
+
+macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq -r '.[] | select(.isInTransit) | .name'`
+
+两条都为空就说明旧版本没往库里写坏东西。真要改，`bean update <id> --start-day 7 --end-day 60` 能补上；在途标记目前只能在 App 里改。
+
+**评分和水温**那两个 bug 不写坏结构，写进去的是 `9` 这种越界分值、`"NaN°C"` 这种字符串——翻一下最近几杯就知道有没有中，中了用 `note update <id> --rating 4 --water-temp 92` 覆盖即可。
 
 ## [0.2.1] - 2026-11-04
 
@@ -106,3 +130,10 @@ npm install -g @fabianactor/brew-cli@0.2.2
 - `equipment add --id <已存在>` 不再覆盖，需要 `--force`。
 - `--origin`、`--process` 从「必填参数」变成「成分级校验」：只要有一个成分带产地或处理法即可，`--component` 也能满足。
 - 输出格式调整：JSON 单行紧凑、诊断信息走 stderr。抓 stdout 解析 JSON 的脚本需要相应调整。
+
+---
+
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/FabianActor/brew-cli/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/FabianActor/brew-cli/compare/8133a4a...v0.2.1
+[0.2.0]: https://www.npmjs.com/package/@fabianactor/brew-cli/v/0.2.0
