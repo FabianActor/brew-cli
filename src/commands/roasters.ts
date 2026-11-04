@@ -3,8 +3,9 @@ import { createSupabaseClient } from '../client.ts';
 import { resolveConfig } from '../config.ts';
 import { createCommandLogger } from '../logger.ts';
 import { assertKnownFlags } from '../lib/args.ts';
-import { exitForError } from '../lib/exit.ts';
+import { EXIT, exitForError, exitWithError } from '../lib/exit.ts';
 import { printJson } from '../lib/output.ts';
+import { MissingRoastersFunctionError, roastersFunctionGuide } from '../lib/roastersSql.ts';
 import { listRoasters } from '../services/roasters.ts';
 
 const argsDef = {
@@ -44,6 +45,9 @@ export default defineCommand({
       await logger.success();
     } catch (error) {
       await logger.error(error);
+      if (error instanceof MissingRoastersFunctionError) {
+        exitWithError(roastersFunctionGuide(), EXIT.FAILURE);
+      }
       exitForError(error);
     }
   },

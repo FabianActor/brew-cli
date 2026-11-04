@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { MissingRoastersFunctionError, isMissingFunctionError } from '../lib/roastersSql.ts';
 
 /**
  * 库里出现过的所有烘焙商（走 RPC `get_all_roasters`，已去重）。
@@ -9,6 +10,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export async function listRoasters(supabase: SupabaseClient): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_all_roasters');
   if (error) {
+    // 函数没建时 PostgREST 只回 404，命令层需要拿到 SQL 才能自救
+    if (isMissingFunctionError(error)) {
+      throw new MissingRoastersFunctionError();
+    }
     throw new Error(`Failed to list roasters: ${error.message}`);
   }
   const names = ((data ?? []) as { roaster: string }[])
