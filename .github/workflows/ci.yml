@@ -10,13 +10,18 @@ jobs:
   verify:
     # Windows 是本地主力平台，macOS 是真实用户的另一大平台：两边都跑，
     # 免得 Windows 专属的 platform 分支和 POSIX 分支只被一种系统验过。
+    #
+    # macOS 特意用 Intel 镜像（macos-15-intel）而不是 macos-latest：
+    # arm64 的 GitHub-hosted 池子经常排队十几分钟甚至拿不到机器
+    # （annotation: "jobs targeting macOS arm64 runners may experience longer queue times"），
+    # Intel 是另一条队列。本项目是纯 JS（无原生模块），x64 足以验证 macOS 上能跑。
     strategy:
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
           - windows-latest
-          - macos-latest
+          - macos-15-intel
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
