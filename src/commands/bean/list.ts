@@ -2,12 +2,9 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
-import { executeListRecent } from '../../tools/listRecent.ts';
-
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
-}
+import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { listSummaries, type JsonbFilter } from '../../lib/query.ts';
+import { parseGrams } from '../../lib/weights.ts';
 
 function printHumanRecords(records: Array<Record<string, unknown>>) {
   for (const record of records) {
@@ -15,10 +12,11 @@ function printHumanRecords(records: Array<Record<string, unknown>>) {
       record.id,
       record.name,
       record.roaster,
-      record.origin,
+      record.region ?? record.origin,
       record.process,
+      record.remaining !== undefined && record.remaining !== '' ? `${record.remaining}g` : undefined,
       record.updated_at,
-    ].filter(Boolean);
+    ].filter((value) => value !== undefined && value !== null && value !== '');
     console.log(fields.join(' | '));
   }
 }
@@ -40,65 +38,72 @@ export default defineCommand({
     const limit = Number.parseInt(String(args.limit), 10);
     if (Number.isNaN(limit) || limit <= 0) {
       await logger.error('Error: --limit must be a positive integer');
-      exitWithError('Error: --limit must be a positive integer', 2);
+      exitWithError('Error: --limit must be a positive integer', EXIT.USAGE);
     }
 
     let hasRemaining: boolean | undefined;
     if (typeof args['has-remaining'] === 'string' && args['has-remaining']) {
-      const v = args['has-remaining'].toLowerCase();
-      if (v !== 'true' && v !== 'false') {
-        exitWithError('Error: --has-remaining must be "true" or "false".', 2);
+      const value = args['has-remaining'].toLowerCase();
+      if (value !== 'true' && value !== 'false') {
+        exitWithError('Error: --has-remaining must be "true" or "false".', EXIT.USAGE);
       }
-      hasRemaining = v === 'true';
+      hasRemaining = value === 'true';
+    }
+
+    const filters: JsonbFilter[] = [];
+    if (typeof args['roast-level'] === 'string' && args['roast-level']) {
+      filters.push({ key: 'roastLevel', value: args['roast-level'] });
+    }
+    if (typeof args['bean-type'] === 'string' && args['bean-type']) {
+      filters.push({ key: 'beanType', value: args['bean-type'] });
     }
 
     try {
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
-      const result = await executeListRecent(supabase, config, { table: 'coffee_beans', limit });
-      const text = result.content[0]?.text ?? '';
 
-      if (/^Failed to list records:/i.test(text)) {
-        await logger.error(text);
-        exitWithError(`Error: Network ${text}`, 65);
-      }
-
-      if (/^No records found in coffee_beans\./i.test(text)) {
-        console.log("No beans found. Use 'brew-guide bean add' to create one.");
-        await logger.success();
-        return;
-      }
-
-      const records: Array<Record<string, unknown>> = JSON.parse(text);
-
-      const parseGrams = (v: unknown) => {
-        if (typeof v !== 'string') return 0;
-        const m = v.match(/^([\d.]+)/);
-        return m ? Number.parseFloat(m[1]) : 0;
-      };
-      const filtered = records.filter((r) => {
-        if (typeof args['roast-level'] === 'string' && args['roast-level'] && r.roastLevel !== args['roast-level']) return false;
-        if (typeof args['bean-type'] === 'string' && args['bean-type'] && r.beanType !== args['bean-type']) return false;
-        if (hasRemaining === true && parseGrams(r.remaining) <= 0) return false;
-        if (hasRemaining === false && parseGrams(r.remaining) > 0) return false;
-        return true;
+      const { rows, truncated } = await listSummaries(supabase, {
+        table: 'coffee_beans',
+        userId: config.brewGuideUserId,
+        limit,
+        filters,
+        predicate:
+          hasRemaining === undefined ? undefined : (data) => {
+            const grams = parseGrams(data.remaining);
+            return hasRemaining ? grams > 0 : grams <= 0;
+          },
       });
 
-      if (args.format === 'json') {
-        console.log(JSON.stringify(filtered));
+      if (truncated) {
+        process.stderr.write('Warning: scanned a lot of rows without filling --limit; result may be partial.\n');
+      }
+
+      if (rows.length === 0) {
+        if (args.format === 'json') {
+          console.log(JSON.stringify([]));
+        } else {
+          console.log("No beans found. Use 'brew-guide bean add' to create one.");
+        }
         await logger.success();
         return;
       }
 
-      printHumanRecords(filtered);
+      if (args.format === 'json') {
+        console.log(JSON.stringify(rows));
+      } else {
+        printHumanRecords(rows);
+      }
       await logger.success();
     } catch (error) {
       await logger.error(error);
       const message = error instanceof Error ? error.message : String(error);
       if (/Missing|Config error/i.test(message)) {
-        exitWithError(`Error: Config ${message}`, 64);
+        exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
       }
-      exitWithError(`Error: ${message}`, 1);
+      if (/^Failed to list records/i.test(message)) {
+        exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+      }
+      exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }
   },
 });

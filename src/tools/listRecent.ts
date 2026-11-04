@@ -1,50 +1,9 @@
 import { Type } from '@sinclair/typebox';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BrewGuideConfig } from '../config.ts';
+import { pickSummaryFields } from '../lib/summary.ts';
 import { isValidTable, VALID_TABLES } from '../lib/tables.ts';
 import { getErrorMessage, invalidParamsResult, isRecord, textResult } from '../lib/toolResults.ts';
-
-// 实际 Supabase 数据中 brewing_notes 使用 rating/totalTime/source/timestamp/notes/equipment，
-// 老字段 (score/flavor/brewTime/ratio) 仅为向后兼容保留。
-// custom_equipments 实际 CLI 写入 name/animationType/hasValve/note/isCustom；
-// brand/model 为旧工具产生的字段，保留以兼容历史数据。
-// custom_methods 每行代表一个 equipment，data 顶层只有 equipmentId + methods 数组，
-// 摘要能显示的标量很少。
-const SUMMARY_FIELDS: Record<string, string[]> = {
-  coffee_beans: ['name', 'roaster', 'origin', 'process', 'variety', 'roastLevel', 'beanType', 'startDay', 'endDay', 'roastDate', 'capacity', 'remaining', 'price', 'isInTransit'],
-  brewing_notes: [
-    'method',
-    'equipment',
-    'beanId',
-    'rating',
-    'totalTime',
-    'source',
-    'timestamp',
-    'notes',
-    'score',
-    'flavor',
-    'ratio',
-    'brewTime',
-  ],
-  custom_equipments: ['name', 'animationType', 'hasValve', 'note', 'isCustom', 'brand', 'model', 'equipmentType', 'category'],
-  custom_methods: ['equipmentId', 'name', 'title', 'category', 'description', 'method'],
-};
-
-const FALLBACK_FIELDS = ['name', 'title', 'label', 'brand', 'model', 'category', 'type', 'method', 'description'];
-
-function pickSummaryFields(table: string, data: Record<string, unknown>) {
-  const summary: Record<string, unknown> = {};
-  const candidates = [...new Set([...(SUMMARY_FIELDS[table] ?? []), ...FALLBACK_FIELDS])];
-
-  for (const key of candidates) {
-    const value = data[key];
-    if (value !== undefined && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')) {
-      summary[key] = value;
-    }
-  }
-
-  return summary;
-}
 
 /**
  * brew_guide_list_recent 工具的参数 schema。
