@@ -1,4 +1,4 @@
-# brew-guide-cli
+# brew-cli
 
 在终端里管理 [brew-guide](https://github.com/chuthree/brew-guide) 的数据：咖啡豆、冲煮记录、器具与配方、烘焙商，直接读写它用的 Supabase 表。
 
@@ -8,11 +8,20 @@
 
 ## 安装
 
-需要 Node.js >= 18。这个仓库目前以本地安装为主（尚未发布到 npm）：
+需要 Node.js >= 18。
 
 ```bash
-git clone https://github.com/FabianActor/brew-guide-cli.git
-cd brew-guide-cli
+npm install -g brew-cli
+brew-guide --version
+```
+
+包名是 `brew-cli`，装完的命令叫 `brew-guide`（跟它操作的那款应用同名）。不想全局装就用 `npx brew-cli bean list`。
+
+从源码装：
+
+```bash
+git clone https://github.com/FabianActor/brew-cli.git
+cd brew-cli
 npm install
 npm run build
 npm link        # 把 brew-guide 挂到全局 PATH
@@ -23,7 +32,7 @@ npm link        # 把 brew-guide 挂到全局 PATH
 想装内嵌的 Agent skill（让 AI 助手知道怎么用这套命令）：
 
 ```bash
-npx skills add github.com/FabianActor/brew-guide-cli -y -g
+npx skills add github.com/FabianActor/brew-cli -y -g
 ```
 
 ## 配置
@@ -217,7 +226,7 @@ npm link                      # 改完只想本地用：build 一次就生效
 
 改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
 
-> 目前这个仓库只供本地使用（`npm link`），暂不发布到 npm。`publish.yml` 已删除，真要发布时再补一段发版流程。
+> 发布流程：改 `package.json` 的版本号 → `git tag v0.2.x && git push origin v0.2.x`。CI 会先跑 typecheck / build / test，然后带 provenance 发到 npm。本地只想验证包内容用 `npm pack --dry-run`。
 
 ## License
 

@@ -1,12 +1,12 @@
-# Supabase project notes for `brew-guide-cli`
+# Supabase project notes for `brew-cli`
 
-This file captures the **project-specific** Supabase conventions for `brew-guide-cli`.
+This file captures the **project-specific** Supabase conventions for `brew-cli`.
 
 Use it together with official Supabase docs. The official docs explain platform behavior; this file explains how **this repository** uses Supabase today.
 
 ## Purpose
 
-`brew-guide-cli` is a Node.js CLI that reads and writes brew-guide data directly in a Supabase project.
+`brew-cli` is a Node.js CLI that reads and writes brew-guide data directly in a Supabase project.
 
 The CLI assumes a brew-guide-style schema where business fields live inside a `data` JSONB column and records are scoped by `user_id`.
 

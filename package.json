@@ -1,8 +1,8 @@
 {
-  "name": "brew-guide-cli",
+  "name": "brew-cli",
   "version": "0.2.0",
   "type": "module",
-  "description": "Standalone Citty CLI for operating brew-guide data in Supabase.",
+  "description": "CLI for operating brew-guide data in Supabase: beans, brewing notes, equipment and methods.",
   "author": {
     "name": "FabianActor",
     "url": "https://github.com/FabianActor"
@@ -10,7 +10,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FabianActor/brew-guide-cli"
+    "url": "https://github.com/FabianActor/brew-cli"
   },
   "keywords": [
     "cli",
@@ -46,7 +46,7 @@
     "dev": "tsx src/main.ts",
     "test": "npm run typecheck && node --import tsx --test",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run build"
+    "prepublishOnly": "npm test && npm run build"
   }
 }
 
