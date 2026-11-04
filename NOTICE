@@ -1,0 +1,11 @@
+brew-cli
+=======
+
+This repository is a fork of [swiftwind0405/brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli),
+released under the MIT License as reproduced in `LICENSE`
+(Copyright (c) 2026 Stanley Wind).
+
+Modifications Copyright (c) 2026 FabianActor.
+
+The changes made in this fork are listed in `git log`. They are distributed under
+the same MIT terms, without warranty of any kind.

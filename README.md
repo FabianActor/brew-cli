@@ -236,4 +236,4 @@ npm link                      # 改完只想本地用：build 一次就生效
 
 ## License
 
-MIT。本仓库是 [swiftwind0405/brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli) 的 fork，现由 FabianActor 维护；上游部分的版权归原作者，改动部分的版权与责任归本仓库维护者。具体改了哪些见 `git log`。
+MIT。本仓库是 [swiftwind0405/brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli) 的 fork，现由 FabianActor 维护；上游部分的版权归原作者，改动部分的版权与责任归本仓库维护者，改动的归属写在 [NOTICE](NOTICE) 里，具体改了哪些见 `git log`。
