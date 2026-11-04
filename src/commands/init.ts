@@ -106,7 +106,7 @@ async function promptForConfig() {
     while (!supabaseUrl.startsWith('https://')) {
       supabaseUrl = String(await prompter.ask('Supabase URL: ')).trim();
       if (!supabaseUrl.startsWith('https://')) {
-        console.log('Supabase URL must start with https://');
+        console.error('Supabase URL must start with https://');
       }
     }
 

@@ -1,0 +1,9 @@
+# 统一 LF：避免 git 在 Windows 上把检出文件改成 CRLF 造成满屏 diff 警告
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary

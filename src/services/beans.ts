@@ -142,23 +142,42 @@ export async function deleteBean(
   return true;
 }
 
+export interface ConsumeResult {
+  bean: Record<string, unknown>;
+  /** 扣减前余量（g）。 */
+  previousRemaining: number;
+  /** 实际扣掉多少（g）——请求量超过库存时等于库存，不会是负数。 */
+  consumed: number;
+  /** 请求量超过了库存：调用方应该提示，而不是静默扣到 0。 */
+  overdrawn: boolean;
+}
+
 /**
  * 扣减咖啡豆余量。
+ *
+ * 库存扣到 0 为止，但会如实报告请求量是否超了（`overdrawn`），
+ * 调用方据此给警告、并按实际扣减量记冲煮记录。
  */
 export async function consumeBean(
   supabase: SupabaseClient,
   beanId: string,
   amountGrams: number,
   userId: string,
-): Promise<Record<string, unknown> | null> {
+): Promise<ConsumeResult | null> {
   const row = await fetchRecordById(supabase, TABLE, beanId, userId);
   if (!row) return null;
 
   const bean: Record<string, unknown> = { ...row.data, id: beanId };
-  const remaining = parseGrams(bean.remaining);
-  const newRemaining = Math.max(0, remaining - amountGrams);
+  const previousRemaining = parseGrams(bean.remaining);
+  const consumed = Math.min(previousRemaining, amountGrams);
+  const newRemaining = Math.max(0, previousRemaining - amountGrams);
   bean.remaining = `${newRemaining}`;
 
   await upsertRecord(supabase, TABLE, beanId, bean, userId);
-  return { ...bean, id: beanId };
+  return {
+    bean: { ...bean, id: beanId },
+    previousRemaining,
+    consumed,
+    overdrawn: amountGrams > previousRemaining,
+  };
 }

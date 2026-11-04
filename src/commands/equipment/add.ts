@@ -2,37 +2,38 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
+import { assertKnownFlags } from '../../lib/args.ts';
+import { exitForError } from '../../lib/exit.ts';
+import { printJson } from '../../lib/output.ts';
 import { addEquipment } from '../../services/equipment.ts';
 
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
-}
+const argsDef = {
+  name: { type: 'string', required: true, description: 'Equipment name.' },
+  id: {
+    type: 'string',
+    description: 'Optional stable ID (slug). Defaults to custom-<slug>-<ts>. Used to cross-reference custom_methods rows.',
+  },
+  'animation-type': {
+    type: 'string',
+    default: 'custom',
+    description: 'Type: v60, kalita, origami, clever, custom, espresso.',
+  },
+  'has-valve': { type: 'boolean', default: false, description: 'Whether it has a valve (for immersion).' },
+  note: { type: 'string', default: '', description: 'Note about the equipment.' },
+  force: { type: 'boolean', default: false, description: 'Overwrite the existing equipment with the same ID.' },
+  'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
+  format: { type: 'string' },
+} as const;
 
 export default defineCommand({
   meta: {
     name: 'add',
     description: 'Add a new custom equipment.',
   },
-  args: {
-    name: { type: 'string', required: true, description: 'Equipment name.' },
-    id: {
-      type: 'string',
-      description: 'Optional stable ID (slug). Defaults to custom-<slug>-<ts>. Used to cross-reference custom_methods rows.',
-    },
-    'animation-type': {
-      type: 'string',
-      default: 'custom',
-      description: 'Type: v60, kalita, origami, clever, custom, espresso.',
-    },
-    'has-valve': { type: 'boolean', default: false, description: 'Whether it has a valve (for immersion).' },
-    note: { type: 'string', default: '', description: 'Note about the equipment.' },
-    force: { type: 'boolean', default: false, description: 'Overwrite the existing equipment with the same ID.' },
-    'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
-    format: { type: 'string' },
-  },
+  args: argsDef,
   async run({ args }) {
     const logger = createCommandLogger(['equipment', 'add'], args as Record<string, unknown>);
+    assertKnownFlags(args as Record<string, unknown>, argsDef, 'equipment add');
 
     const equipmentData = {
       name: args.name,
@@ -43,7 +44,8 @@ export default defineCommand({
 
     if (args['dry-run']) {
       if (args.format === 'json') {
-        console.log(JSON.stringify({ dryRun: true, equipment: equipmentData }));
+        // dry-run 预览也用紧凑 JSON：stdout 只放数据
+        printJson({ dryRun: true, equipment: equipmentData });
       } else {
         console.log(`[dry-run] Would add equipment:\n${JSON.stringify(equipmentData, null, 2)}`);
       }
@@ -66,7 +68,7 @@ export default defineCommand({
       );
 
       if (args.format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
+        printJson(result);
       } else {
         console.log(`Added equipment: ${result.name} (ID: ${String(result.id).slice(0, 8)})`);
       }
@@ -74,8 +76,7 @@ export default defineCommand({
       await logger.success();
     } catch (error) {
       await logger.error(error);
-      const message = error instanceof Error ? error.message : String(error);
-      exitWithError(`Error: ${message}`, 1);
+      exitForError(error);
     }
   },
 });

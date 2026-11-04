@@ -9,7 +9,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient } from '../client.ts';
 import { resolveConfig } from '../config.ts';
 import { createCommandLogger } from '../logger.ts';
-import { EXIT, exitForError } from './exit.ts';
+import { assertKnownFlags } from './args.ts';
+import { EXIT, exitForError, exitWithError } from './exit.ts';
+import { printJson } from './output.ts';
 
 interface EntitySpec {
   /** 命令路径第一段，例如 'bean'；也用作日志分类和 dry-run 文案里的实体名。 */
@@ -32,17 +34,20 @@ export interface EntityDeleteSpec extends EntitySpec {
 }
 
 export function createGetCommand<T>(spec: EntityGetSpec<T>) {
+  const argsDef = {
+    id: { type: 'positional', required: true, description: spec.idDescription },
+    format: { type: 'string' },
+  } as const;
+
   return defineCommand({
     meta: {
       name: 'get',
       description: spec.getDescription,
     },
-    args: {
-      id: { type: 'positional', required: true, description: spec.idDescription },
-      format: { type: 'string' },
-    },
+    args: argsDef,
     async run({ args }) {
       const logger = createCommandLogger([spec.entity, 'get'], args as Record<string, unknown>);
+      assertKnownFlags(args as Record<string, unknown>, argsDef, `${spec.entity} get`);
 
       try {
         const config = await resolveConfig();
@@ -50,13 +55,12 @@ export function createGetCommand<T>(spec: EntityGetSpec<T>) {
         const record = await spec.fetch(supabase, args.id, config.brewGuideUserId);
 
         if (!record) {
-          console.error(`${spec.label} ${args.id} not found.`);
           await logger.error(`${spec.label} ${args.id} not found`);
-          process.exit(EXIT.FAILURE);
+          exitWithError(`${spec.label} ${args.id} not found.`, EXIT.FAILURE);
         }
 
         if (args.format === 'json') {
-          console.log(JSON.stringify(record, null, 2));
+          printJson(record);
         } else {
           console.log(spec.describe(record).join('\n'));
         }
@@ -71,23 +75,26 @@ export function createGetCommand<T>(spec: EntityGetSpec<T>) {
 }
 
 export function createDeleteCommand(spec: EntityDeleteSpec) {
+  const argsDef = {
+    id: { type: 'positional', required: true, description: spec.idDescription },
+    'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
+    format: { type: 'string' },
+  } as const;
+
   return defineCommand({
     meta: {
       name: 'delete',
       description: spec.deleteDescription,
     },
-    args: {
-      id: { type: 'positional', required: true, description: spec.idDescription },
-      'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
-      format: { type: 'string' },
-    },
+    args: argsDef,
     async run({ args }) {
       const logger = createCommandLogger([spec.entity, 'delete'], args as Record<string, unknown>);
+      assertKnownFlags(args as Record<string, unknown>, argsDef, `${spec.entity} delete`);
       const shortId = args.id.slice(0, 8);
 
       if (args['dry-run']) {
         if (args.format === 'json') {
-          console.log(JSON.stringify({ dryRun: true, action: 'delete', id: args.id }));
+          printJson({ dryRun: true, action: 'delete', id: args.id });
         } else {
           console.log(`[dry-run] Would delete ${spec.entity} ${shortId}`);
         }
@@ -101,13 +108,12 @@ export function createDeleteCommand(spec: EntityDeleteSpec) {
         const deleted = await spec.remove(supabase, args.id, config.brewGuideUserId);
 
         if (!deleted) {
-          console.error(`${spec.label} ${args.id} not found.`);
           await logger.error(`${spec.label} ${args.id} not found`);
-          process.exit(EXIT.FAILURE);
+          exitWithError(`${spec.label} ${args.id} not found.`, EXIT.FAILURE);
         }
 
         if (args.format === 'json') {
-          console.log(JSON.stringify({ deleted: args.id }));
+          printJson({ deleted: args.id });
         } else {
           console.log(`Deleted ${spec.entity} ${shortId}`);
         }

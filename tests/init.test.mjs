@@ -102,6 +102,7 @@ test('brew-guide init re-prompts after an invalid URL', async (t) => {
   });
 
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /https:\/\//i);
+  // 错误提示走 stderr，stdout 只留数据/正常输出
+  assert.match(result.stderr, /must start with https:\/\//i);
   assert.match(result.stdout, /配置已保存至/);
 });

@@ -41,7 +41,7 @@
     "build:watch": "tsup --watch --onSuccess \"node scripts/chmod-bin.mjs\"",
     "postbuild": "node scripts/chmod-bin.mjs",
     "dev": "tsx src/main.ts",
-    "test": "npx tsc && node --import tsx --test",
+    "test": "npm run typecheck && node --import tsx --test",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run typecheck && npm run build"
   }
