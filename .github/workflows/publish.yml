@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # npm provenance
+      id-token: write # OIDC token for npm trusted publishing
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # trusted publishing needs Node >= 22.14 / npm >= 11.5.1
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm ci
@@ -38,6 +38,7 @@ jobs:
             exit 1
           fi
 
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # No NPM_TOKEN on purpose: npm exchanges the GitHub OIDC token for a
+      # short-lived publish credential. Requires a trusted publisher on npmjs.com
+      # (package -> Settings -> Trusted publishing -> GitHub Actions).
+      - run: npm publish --access public
