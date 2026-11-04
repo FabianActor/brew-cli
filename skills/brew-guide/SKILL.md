@@ -13,6 +13,10 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 
 **NEVER create incomplete records.** 先收集足够信息，再写入。
 
+**字段口径**：产地 / 产区 / 庄园 / 处理站 / 处理法 / 品种怎么拆，见 `references/bean-add.md` 的「1.5 字段拆分口径」，不要凭直觉把一整串地名塞进 `--origin`。
+
+> ⚠️ 当前 `bean add` 只有 `--origin / --estate / --process / --variety` 四个成分 flag，`region`、`processingStation`、`percentage` 还传不进去；遇到需要它们的豆子，先按口径想清楚，落地时再补齐（见 `bean-add.md` 拼配说明）。
+
 ## 渐进式披露（重要）
 
 复杂操作的完整规则放在 `references/` 下。执行前按需读取，不要凭记忆。
