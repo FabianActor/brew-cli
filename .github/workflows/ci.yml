@@ -8,7 +8,16 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Windows 是本地主力平台，macOS 是真实用户的另一大平台：两边都跑，
+    # 免得 Windows 专属的 platform 分支和 POSIX 分支只被一种系统验过。
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
