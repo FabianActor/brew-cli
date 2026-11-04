@@ -2,24 +2,23 @@
 
 在终端里管理 [brew-guide](https://github.com/chuthree/brew-guide) 的数据：咖啡豆、冲煮记录、器具与配方、烘焙商，直接读写它用的 Supabase 表。
 
-```bash
-brew-guide bean list --limit 5
-brew-guide note add --bean-id bean_xxx --method "V60" --rating 4.5
-```
-
 数据和应用里看到的是同一份——手机上刷新就能看到你在终端里记的那一杯。
 
 ---
 
 ## 安装
 
-需要 Node.js >= 18。
+需要 Node.js >= 18。这个仓库目前以本地安装为主（尚未发布到 npm）：
 
 ```bash
-npm install -g brew-guide-cli
+git clone https://github.com/FabianActor/brew-guide-cli.git
+cd brew-guide-cli
+npm install
+npm run build
+npm link        # 把 brew-guide 挂到全局 PATH
 ```
 
-装完 `brew-guide` 就在 PATH 里了。
+之后改代码只要再跑一次 `npm run build` 就生效，不用重装。
 
 想装内嵌的 Agent skill（让 AI 助手知道怎么用这套命令）：
 
@@ -82,20 +81,24 @@ $$;
 ### 1. 查豆
 
 ```bash
-# 最近加的 10 颗
+# 最近加的 10 款
 brew-guide bean list --limit 10
 
 # 按产区 / 处理法 / 品种找（包含匹配，--region 古吉 能命中「古吉 罕贝拉」）
 brew-guide bean list --region 古吉 --has-remaining true
 
-# 看一颗的完整字段
+# 看一款的完整字段
 brew-guide bean get bean_xxx
 
 # 还剩什么烘焙商
 brew-guide roasters
 ```
 
-### 2. 加一颗豆
+### 2. 加一款豆
+
+> **先在 App 里打开这些字段**：设置 → 咖啡豆 → 咖啡豆字段，勾选 烘焙商、产地、产区、庄园、处理站、海拔、处理法、品种。没勾的字段在应用里看不到，等于白写。
+>
+> 两个当前限制：**产国与产地在后端是同一个字段**（开产国就得把国家从产地搬走，否则同一信息存两处）；**批次字段暂未适配**。
 
 ```bash
 brew-guide bean add \
@@ -212,12 +215,7 @@ npm link                      # 改完只想本地用：build 一次就生效
 
 改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
 
-### 发布
-
-```bash
-npm version minor             # 改版本 + 打 tag
-git push origin master --tags # tag 触发 GitHub Actions 发布到 npm
-```
+> 目前这个仓库只供本地使用（`npm link`），暂不发布到 npm。`.github/workflows/publish.yml` 仍在，推 `v*` tag 会触发发布——真要发之前先把包名和发布范围理清。
 
 ## License
 
