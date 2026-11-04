@@ -6,7 +6,7 @@ import { runCliSync } from './helpers/cli.mjs';
 function getOfflineEnv() {
   return {
     BREW_GUIDE_SUPABASE_URL: '',
-    BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY: '',
+    BREW_GUIDE_SUPABASE_KEY: '',
     BREW_GUIDE_USER_ID: '',
   };
 }

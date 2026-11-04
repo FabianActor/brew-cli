@@ -110,7 +110,9 @@ async function promptForConfig() {
       }
     }
 
-    const supabaseServiceRoleKey = String(await prompter.askHidden('Service Role Key (input hidden): ')).trim();
+    const supabaseKey = String(
+      await prompter.askHidden('API key (publishable / legacy anon; service_role not needed; input hidden): '),
+    ).trim();
     const userInput = String(await prompter.ask('User ID (default_user): ')).trim();
     const brewGuideUserId = userInput || 'default_user';
 
@@ -120,7 +122,7 @@ async function promptForConfig() {
       JSON.stringify(
         {
           supabaseUrl,
-          supabaseServiceRoleKey,
+          supabaseKey,
           brewGuideUserId,
         },
         null,
@@ -134,6 +136,7 @@ async function promptForConfig() {
     }
 
     console.log(`配置已保存至 ${configPath}`);
+    console.log('提示：roasters 需要库里有 public.get_all_roasters()，缺了会在运行时把建函数的 SQL 打给你。');
   } catch (error) {
     console.error('Setup cancelled');
     process.exit(130);

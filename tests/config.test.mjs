@@ -37,20 +37,20 @@ test('resolveConfig prefers environment variables over config file values', asyn
       configPath,
       JSON.stringify({
         supabaseUrl: 'https://file.supabase.co',
-        supabaseServiceRoleKey: 'file-key',
+        supabaseKey: 'file-key',
         brewGuideUserId: 'file-user',
       }),
       'utf8',
     );
 
     process.env.BREW_GUIDE_SUPABASE_URL = 'https://env.supabase.co';
-    process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY = 'env-key';
+    process.env.BREW_GUIDE_SUPABASE_KEY = 'env-key';
     process.env.BREW_GUIDE_USER_ID = 'env-user';
 
     const config = await resolveConfig();
 
     assert.equal(config.supabaseUrl, 'https://env.supabase.co');
-    assert.equal(config.supabaseServiceRoleKey, 'env-key');
+    assert.equal(config.supabaseKey, 'env-key');
     assert.equal(config.brewGuideUserId, 'env-user');
   });
 });
@@ -61,20 +61,20 @@ test('resolveConfig reads credentials from cwd .env when process env is unset', 
       path.join(workDir, '.env'),
       [
         'BREW_GUIDE_SUPABASE_URL=https://dotenv.supabase.co',
-        'BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY=dotenv-key',
+        'BREW_GUIDE_SUPABASE_KEY=dotenv-key',
         'BREW_GUIDE_USER_ID=dotenv-user',
       ].join('\n'),
       'utf8',
     );
 
     delete process.env.BREW_GUIDE_SUPABASE_URL;
-    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
     delete process.env.BREW_GUIDE_USER_ID;
 
     const config = await resolveConfig();
 
     assert.equal(config.supabaseUrl, 'https://dotenv.supabase.co');
-    assert.equal(config.supabaseServiceRoleKey, 'dotenv-key');
+    assert.equal(config.supabaseKey, 'dotenv-key');
     assert.equal(config.brewGuideUserId, 'dotenv-user');
   });
 });
@@ -85,20 +85,20 @@ test('resolveConfig falls back to ~/.config/brew-guide/config.json', async (t) =
       configPath,
       JSON.stringify({
         supabaseUrl: 'https://file-only.supabase.co',
-        supabaseServiceRoleKey: 'file-only-key',
+        supabaseKey: 'file-only-key',
         brewGuideUserId: 'file-only-user',
       }),
       'utf8',
     );
 
     delete process.env.BREW_GUIDE_SUPABASE_URL;
-    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
     delete process.env.BREW_GUIDE_USER_ID;
 
     const config = await resolveConfig();
 
     assert.equal(config.supabaseUrl, 'https://file-only.supabase.co');
-    assert.equal(config.supabaseServiceRoleKey, 'file-only-key');
+    assert.equal(config.supabaseKey, 'file-only-key');
     assert.equal(config.brewGuideUserId, 'file-only-user');
   });
 });
@@ -106,7 +106,7 @@ test('resolveConfig falls back to ~/.config/brew-guide/config.json', async (t) =
 test('resolveConfig throws when no credentials are available', async (t) => {
   await withSandbox(t, async () => {
     delete process.env.BREW_GUIDE_SUPABASE_URL;
-    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
     delete process.env.BREW_GUIDE_USER_ID;
 
     await assert.rejects(
@@ -126,14 +126,14 @@ const posixOnly = process.platform === 'win32' ? { skip: 'POSIX permissions are 
 test('resolveConfig warns when config file permissions are too broad', posixOnly, async (t) => {
   await withSandbox(t, async ({ configPath }) => {
     delete process.env.BREW_GUIDE_SUPABASE_URL;
-    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
     delete process.env.BREW_GUIDE_USER_ID;
 
     await fs.writeFile(
       configPath,
       JSON.stringify({
         supabaseUrl: 'https://warning.supabase.co',
-        supabaseServiceRoleKey: 'warning-key',
+        supabaseKey: 'warning-key',
       }),
       'utf8',
     );
@@ -158,7 +158,7 @@ test('resolveConfig warns when config file permissions are too broad', posixOnly
     const config = await resolveConfig();
 
     assert.equal(config.supabaseUrl, 'https://warning.supabase.co');
-    assert.equal(config.supabaseServiceRoleKey, 'warning-key');
+    assert.equal(config.supabaseKey, 'warning-key');
     assert.match(stderr.join(''), /Warning: config file has insecure permissions/i);
   });
 });
@@ -169,14 +169,14 @@ test(
   async (t) => {
     await withSandbox(t, async ({ configPath }) => {
       delete process.env.BREW_GUIDE_SUPABASE_URL;
-      delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+      delete process.env.BREW_GUIDE_SUPABASE_KEY;
       delete process.env.BREW_GUIDE_USER_ID;
 
       await fs.writeFile(
         configPath,
         JSON.stringify({
           supabaseUrl: 'https://warning.supabase.co',
-          supabaseServiceRoleKey: 'warning-key',
+          supabaseKey: 'warning-key',
         }),
         'utf8',
       );
@@ -203,3 +203,94 @@ test(
     });
   },
 );
+
+/** 接住 stderr，测试结束后自动还原。 */
+function captureStderr(t) {
+  const chunks = [];
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  process.stderr.write = ((chunk, encoding, callback) => {
+    chunks.push(String(chunk));
+    if (typeof encoding === 'function') {
+      encoding();
+    } else if (typeof callback === 'function') {
+      callback();
+    }
+    return true;
+  });
+  t.after(() => {
+    process.stderr.write = originalWrite;
+  });
+  return chunks;
+}
+
+test('resolveConfig still reads the legacy supabaseServiceRoleKey field, with a warning', async (t) => {
+  await withSandbox(t, async ({ configPath }) => {
+    delete process.env.BREW_GUIDE_SUPABASE_URL;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
+    delete process.env.BREW_GUIDE_USER_ID;
+
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://legacy.supabase.co',
+        supabaseServiceRoleKey: 'legacy-key',
+      }),
+      'utf8',
+    );
+
+    const stderr = captureStderr(t);
+    const config = await resolveConfig();
+
+    assert.equal(config.supabaseKey, 'legacy-key');
+    assert.match(stderr.join(''), /旧字段名 supabaseServiceRoleKey/);
+  });
+});
+
+test('resolveConfig reads the legacy env var and warns about the misleading name', async (t) => {
+  await withSandbox(t, async ({ configPath }) => {
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://legacy-env.supabase.co',
+        supabaseKey: 'file-key',
+      }),
+      'utf8',
+    );
+
+    delete process.env.BREW_GUIDE_SUPABASE_URL;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
+    delete process.env.BREW_GUIDE_USER_ID;
+    process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY = 'legacy-env-key';
+
+    const stderr = captureStderr(t);
+    const config = await resolveConfig();
+
+    assert.equal(config.supabaseKey, 'legacy-env-key');
+    assert.match(stderr.join(''), /旧字段名 supabaseServiceRoleKey/);
+  });
+});
+
+test('resolveConfig prefers supabaseKey over the legacy field and stays quiet', async (t) => {
+  await withSandbox(t, async ({ configPath }) => {
+    delete process.env.BREW_GUIDE_SUPABASE_URL;
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
+    delete process.env.BREW_GUIDE_USER_ID;
+    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://both.supabase.co',
+        supabaseKey: 'new-key',
+        supabaseServiceRoleKey: 'old-key',
+      }),
+      'utf8',
+    );
+
+    const stderr = captureStderr(t);
+    const config = await resolveConfig();
+
+    assert.equal(config.supabaseKey, 'new-key');
+    assert.doesNotMatch(stderr.join(''), /旧字段名/);
+  });
+});

@@ -6,7 +6,7 @@ import { executeUpsertNote } from '../src/tools/upsertNote.ts';
 
 const config = {
   supabaseUrl: 'https://example.supabase.co',
-  supabaseServiceRoleKey: 'service-role-key',
+  supabaseKey: 'service-role-key',
   brewGuideUserId: 'default_user',
 };
 

@@ -223,7 +223,7 @@ test('normalizeWeight and parseGrams agree on the same values', () => {
 test('resolveConfig strips trailing slashes from the Supabase URL', async () => {
   const originalEnv = { ...process.env };
   process.env.BREW_GUIDE_SUPABASE_URL = 'https://example.supabase.co//';
-  process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY = 'key';
+  process.env.BREW_GUIDE_SUPABASE_KEY = 'key';
   process.env.BREW_GUIDE_USER_ID = 'default_user';
 
   try {

@@ -7,7 +7,7 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 
 通过 `brew-guide` CLI 管理咖啡豆、冲煮记录、器具和冲煮方案。
 
-前置条件：先 `brew-guide init` 配置 Supabase 凭证，或用 `BREW_GUIDE_*` 环境变量。
+前置条件：先 `brew-guide init` 配置 Supabase 凭证（**publishable / legacy anon key 就够，不要 service_role**——权限边界是表上的宽 RLS，不是这把 key），或用 `BREW_GUIDE_*` 环境变量。
 
 ## Core Principle
 
@@ -89,6 +89,8 @@ brew-guide init
 ```bash
 brew-guide roasters [--format json]
 ```
+
+依赖库里的 `public.get_all_roasters()` 函数。项目里没建时命令会 **exit 1 并把建函数的 SQL 打到 stderr**，直接照抄进 Supabase SQL Editor 即可，不需要猜。
 
 ### backup — 整库备份
 

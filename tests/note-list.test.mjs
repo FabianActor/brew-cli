@@ -41,7 +41,7 @@ test('brew-guide note list exits 64 when config is missing', () => {
   const result = runCliSync(['note', 'list'], {
     env: {
       BREW_GUIDE_SUPABASE_URL: '',
-      BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY: '',
+      BREW_GUIDE_SUPABASE_KEY: '',
       BREW_GUIDE_USER_ID: '',
       BREW_GUIDE_CONFIG_PATH: '/tmp/does-not-exist-config.json',
     },

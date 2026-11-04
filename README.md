@@ -37,12 +37,14 @@ brew-guide init
 | 项 | 说明 |
 | --- | --- |
 | Supabase URL | 你的项目地址，结尾的 `/` 会自动去掉 |
-| Service Role Key | 输入时不回显。如果表已对 `anon` 放开（brew-guide 自带 schema 就是 `USING (true)` 宽 RLS），填 publishable / anon key 也能用，权限边界完全由 RLS 决定 |
+| API key | **publishable** key 就够（旧名 `anon`，在 Legacy API keys 标签里）；**不需要** service_role / secret key。输入时不回显，存在配置文件的 `supabaseKey` 字段 |
 | User ID | 同步用的用户标识，默认 `default_user` |
 
-配置写到 `~/.config/brew-guide/config.json`，想换位置就设 `BREW_GUIDE_CONFIG_PATH`。
+为什么 publishable 就够：brew-guide 自带的 schema 对五张表都开了 `USING (true)` 宽 RLS，还对 `anon` 显式授了增删改查——权限边界**就是** RLS 本身，换个人拿到同一把 key 也是这个权限。**它不能绕过 RLS**：表上没有对应策略的库，这把 key 一样被拒。想收窄的话得改策略，不是换 key。
 
-> **前置条件**：库里需要有 `public.get_all_roasters()` 函数（`roasters` 命令靠它汇总烘焙商）。brew-guide 自带的 schema 里不含这个函数，自己项目第一次用要先建。
+配置写到 `~/.config/brew-guide/config.json`，想换位置就设 `BREW_GUIDE_CONFIG_PATH`。老版本写下的 `supabaseServiceRoleKey` 字段仍能读（会提示一次改名），新写的都是 `supabaseKey`。
+
+> **前置条件**：`roasters` 命令需要库里存在 `public.get_all_roasters()` 函数，brew-guide 自带的 schema 里没有。没建也不会默默失败——跑 `roasters` 时它会把下面的 SQL 直接打给你，贴进 Supabase SQL Editor 跑一次即可。
 
 <details>
 <summary>建函数的 SQL</summary>

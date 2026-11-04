@@ -39,7 +39,7 @@ test('brew-guide init creates a config file with 600 permissions', async (t) => 
   const stat = await fs.stat(sandbox.configPath);
 
   assert.equal(saved.supabaseUrl, 'https://init.supabase.co');
-  assert.equal(saved.supabaseServiceRoleKey, 'service-role-key');
+  assert.equal(saved.supabaseKey, 'service-role-key');
   assert.equal(saved.brewGuideUserId, 'cli-user');
   // Windows 没有 POSIX 权限位，chmod 是空操作，只在类 Unix 上断言 0600。
   if (process.platform !== 'win32') {
@@ -73,7 +73,7 @@ test('brew-guide init overwrites an existing config after confirmation', async (
     sandbox.configPath,
     JSON.stringify({
       supabaseUrl: 'https://old.supabase.co',
-      supabaseServiceRoleKey: 'old-key',
+      supabaseKey: 'old-key',
       brewGuideUserId: 'old-user',
     }),
     'utf8',
@@ -88,7 +88,7 @@ test('brew-guide init overwrites an existing config after confirmation', async (
   assert.equal(result.code, 0);
   const saved = JSON.parse(await fs.readFile(sandbox.configPath, 'utf8'));
   assert.equal(saved.supabaseUrl, 'https://new.supabase.co');
-  assert.equal(saved.supabaseServiceRoleKey, 'new-key');
+  assert.equal(saved.supabaseKey, 'new-key');
   assert.equal(saved.brewGuideUserId, 'new-user');
 });
 

@@ -12,7 +12,16 @@ The CLI assumes a brew-guide-style schema where business fields live inside a `d
 
 ## Connection model
 
-The CLI currently uses **service-role access**, not end-user auth.
+The CLI sends one key and does **not** use end-user auth. That key is a
+`publishable` (formerly `anon`) key — the modern Supabase dashboard splits API
+keys into *Publishable* and *Secret*; the legacy `anon` lives under
+"Legacy API keys" and is equivalent.
+
+A `service_role` / secret key is **not** needed. Everything works because
+brew-guide's own schema enables RLS with `USING (true)` / `WITH CHECK (true)`
+and grants CRUD to `anon`, so the permission boundary *is* the RLS policy. On
+any table without such a policy, this key is simply denied — it does not
+bypass RLS.
 
 Configuration comes from either:
 
@@ -22,9 +31,13 @@ Configuration comes from either:
 Resolved config keys:
 
 - `BREW_GUIDE_SUPABASE_URL`
-- `BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY`
+- `BREW_GUIDE_SUPABASE_KEY` (legacy alias: `BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY`)
 - `BREW_GUIDE_USER_ID`
 - optional `BREW_GUIDE_CONFIG_PATH`
+
+The config file field is `supabaseKey`. Older installs wrote
+`supabaseServiceRoleKey`; it is still read (with a warning on stderr) so
+existing config files keep working, but new writes use `supabaseKey`.
 
 Default config path:
 
@@ -294,10 +307,13 @@ If payload shapes change, this summary layer may need updates too.
 
 ## Current architectural caveats
 
-1. **Service-role key is powerful**
-   - The CLI is designed around a service-role key.
-   - Treat config as sensitive.
-   - Do not commit real keys.
+1. **The configured key can touch every row these tables expose**
+   - With `USING (true)` policies, anyone holding the publishable key can read,
+     write and delete rows in those tables. That is the design of the schema,
+     not a property of the key.
+   - Treat config as sensitive; do not commit real keys.
+   - The field used to be called `supabaseServiceRoleKey`, which implied
+     RLS-bypass powers it never had. It is now `supabaseKey`.
 
 2. **Project rules are implemented in code, not migrations**
    - This repo currently documents required SQL in `README.md`.
@@ -328,5 +344,5 @@ If this project will keep evolving, the biggest improvements would be:
 
 1. add `supabase/migrations/` with the SQL for `get_all_roasters()` and any table assumptions
 2. document the canonical JSON payload shape for each table more formally
-3. decide whether service-role access remains intentional long-term or whether some flows should move to safer scoped credentials
+3. tighten RLS from `USING (true)` to user-scoped policies, so the publishable key alone stops being enough to read every row
 4. add tests that exercise the expected table and RPC contracts

@@ -57,7 +57,7 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 
 ### Data model facts
 
-- The CLI sends whatever key is configured. brew-guide's own schema enables RLS with `USING (true)` / `WITH CHECK (true)` and grants CRUD to `anon`, so a publishable/anon key works exactly like a service-role key here — the permission boundary **is** the RLS policy. Do not describe this setup as "bypasses RLS".
+- The config field is `supabaseKey` (env `BREW_GUIDE_SUPABASE_KEY`), holding a publishable / legacy anon key — **not** a service_role key, and it does not bypass RLS. brew-guide's schema enables RLS with `USING (true)` / `WITH CHECK (true)` and grants CRUD to `anon`, so this key works there; the permission boundary **is** the RLS policy. The legacy config field `supabaseServiceRoleKey` is still read (with a stderr warning) — only for backwards compatibility, never write it.
 - Tables: `coffee_beans`, `brewing_notes`, `custom_equipments`, `custom_methods`, `user_settings`. All rows are scoped by `user_id`; primary key is `(id, user_id)`, hence `onConflict: 'id,user_id'`.
 - Business payload lives in the `data` JSONB column; `id` is mirrored into `data.id`.
 - Soft delete via `deleted_at`. Every write sets `deleted_at: null`, so writing to a soft-deleted id **revives** it. Lists read `deleted_at is null` only.
