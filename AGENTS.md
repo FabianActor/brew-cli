@@ -62,6 +62,8 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - Tables: `coffee_beans`, `brewing_notes`, `custom_equipments`, `custom_methods`, `user_settings`. All rows are scoped by `user_id`; primary key is `(id, user_id)`, hence `onConflict: 'id,user_id'`.
 - Business payload lives in the `data` JSONB column; `id` is mirrored into `data.id`.
 - Soft delete via `deleted_at`. Every write sets `deleted_at: null`, so writing to a soft-deleted id **revives** it. Lists read `deleted_at is null` only.
+- Writes are read-modify-write, so they must not clobber concurrent app edits: pass the `updated_at` you read into `upsertRecord` / `softDeleteRecord` (compare-and-swap, same convention as `brew-guide/src/lib/supabase/syncOperations.ts:867-878`). Zero affected rows throws `StaleRecordError` — report it, don't retry silently. Only fresh inserts (and the `upsertBeanRecord` / `upsertNoteRecord` tool layer) skip the guard.
+- `fetchActiveRecords` pages with `.range()` in 500-row batches; never read a table with a single unbounded `select` (PostgREST caps the response and drops the rest silently).
 - Time values inside `data` are **milliseconds since epoch**, not ISO strings (`timestamp`, `updatedAt`).
 - Origin lives in `data.blendComponents[]`; flat flags (`--origin`, `--region`, …) are merged into the first component and removed from the top level on write.
 - Bean state: `data.beanState` is `roasted` (default) or `green`. Green beans carry `purchaseDate` and have **no** `roastDate`, `roastLevel`, `startDay` or `endDay` — the app swaps 「烘焙日期」for 「购买日期」. `isInTransit` and `isFrozen` are mutually exclusive display states, both default `false`.

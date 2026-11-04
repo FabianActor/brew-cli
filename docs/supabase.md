@@ -252,6 +252,24 @@ Upserts use:
 
 That means upserting an existing soft-deleted record effectively restores it.
 
+### Concurrent writes (compare-and-swap)
+
+Every update/delete path reads the row first and writes back the merged result, so a blind upsert would overwrite anything the app wrote in between. The app already guards against this — it uploads with
+
+```ts
+updated_at: new Date(Math.max(Date.now(), remote ? Date.parse(remote.updated_at) + 1 : 0))
+// ...
+.eq('updated_at', remote.updated_at)
+```
+
+(`brew-guide/src/lib/supabase/syncOperations.ts:867-878`), i.e. `updated_at` doubles as an optimistic-concurrency version. The CLI follows the same convention:
+
+- `upsertRecord(supabase, table, id, data, userId, expectedUpdatedAt?)` and `softDeleteRecord(..., expectedUpdatedAt?)` take the `updated_at` the caller read.
+- With a value, they issue a conditional `update … .eq('updated_at', expected).select('id')`; zero affected rows throw `StaleRecordError` (`记录 … 在你读取之后被改过或删掉了 …`) instead of writing.
+- Without a value (fresh inserts, and the tool-layer `upsertBeanRecord` / `upsertNoteRecord`), they fall back to the plain upsert above.
+
+`fetchActiveRecords` pages with `.range()` in 500-row batches; PostgREST caps a single response (commonly 1000 rows) and silently drops the rest, which used to make `method update/delete` report "not found" on larger libraries.
+
 ### Delete rules
 
 For beans, notes, and equipment, delete means:

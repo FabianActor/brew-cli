@@ -27,6 +27,9 @@
 
 ### 修复
 
+- **写回时可能覆盖 App 刚改的数据**：改/删都是「先读整行、改完写回」，以前写回时不检查这行是不是还是读到的那一版，App 在中间写过一次就会被旧快照盖掉。现在按 App 自己的并发约定（`syncOperations.ts:867-878` 拿 `updated_at` 当版本号）做 compare-and-swap：版本对不上就放弃写入并提示重跑，而不是闷头覆盖。
+- **`equipment add --force` 会抹掉器具的自定义图形**：以前拿同一个 id 覆盖时只写 `name/animationType/hasValve/note`，把 App 里画的 `customShapeSvg`、`customValveSvg`、`customValveOpenSvg` 全清空了。现在保留旧行里 CLI 没有开关的字段，只替换显式传的几项。
+- **方法多过 1000 条时「找不到」**：`method update` / `method delete` 之前一次拉全部 `custom_methods` 行，超过 PostgREST 单次上限（常见 1000 行）的部分会静默消失。现在分页拉全量。
 - **`--price` 不校验**：以前 `abc` 也照写，App 详情页算「元/克」时出 `NaN`。现在只收数字（最多两位小数），顺手容错 `¥88`、`88元`。
 - **`upsertBeanRecord` 把修好的写入语义又覆盖回去**：这个工具层还留着旧兜底——没烘焙度就写「浅度烘焙」、赏味期硬填 `30/60`、有烘焙日期就把在途改成 `false`。上一版只修了命令层，实测生豆仍被写成 `startDay=30`、在途豆仍被写成已到手。现在这一层只补形状默认值（`beanType`、`beanState`、`isFrozen`），不替用户猜内容。
 - **`c12` 会读当前目录的 `.env`**：以前在别的项目目录里跑，那边恰好有 `BREW_GUIDE_*` / `SUPABASE_*` 的 `.env`，就会悄悄换成另一个库。现在只读配置文件和 shell 里真正导出的环境变量。
