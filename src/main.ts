@@ -1,5 +1,6 @@
 import { defineCommand, runMain } from 'citty';
 import packageJson from '../package.json' with { type: 'json' };
+import backupCommand from './commands/backup.ts';
 import beanCommand from './commands/bean/index.ts';
 import equipmentCommand from './commands/equipment/index.ts';
 import initCommand from './commands/init.ts';
@@ -20,6 +21,7 @@ const main = defineCommand({
     equipment: equipmentCommand,
     method: methodCommand,
     roasters: roastersCommand,
+    backup: backupCommand,
   },
 });
 
