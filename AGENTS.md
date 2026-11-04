@@ -6,7 +6,7 @@ Guidance for coding agents working in this repository. This is the single source
 
 `brew-cli` — a standalone Citty CLI for operating [brew-guide](https://github.com/chuthree/brew-guide) data in Supabase: coffee beans, brewing notes, equipment, brewing methods, roasters. It talks to the same tables the app syncs, so a record written here shows up in the app.
 
-Published to npm as **`brew-cli`**, command name **`brew-guide`**. `npm link` still works for a local build; `package.json` version is bumped by hand and released by pushing a `v*` tag.
+Published to npm as **`@fabianactor/brew-cli`** (the unscoped `brew-cli` name is a permanently retired npm tombstone — do not try to use it), command name **`brew-guide`**. `npm link` still works for a local build; `package.json` version is bumped by hand and released by pushing a `v*` tag.
 
 ## Tech stack
 

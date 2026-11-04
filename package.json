@@ -1,5 +1,5 @@
 {
-  "name": "brew-cli",
+  "name": "@fabianactor/brew-cli",
   "version": "0.2.0",
   "type": "module",
   "description": "CLI for operating brew-guide data in Supabase: beans, brewing notes, equipment and methods.",

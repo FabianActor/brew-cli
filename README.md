@@ -11,11 +11,11 @@
 需要 Node.js >= 18。
 
 ```bash
-npm install -g brew-cli
+npm install -g @fabianactor/brew-cli
 brew-guide --version
 ```
 
-包名是 `brew-cli`，装完的命令叫 `brew-guide`（跟它操作的那款应用同名）。不想全局装就用 `npx brew-cli bean list`。
+包名是 `@fabianactor/brew-cli`（`brew-cli` 在 npm 上被人下架过，名字锁死了，用不了），装完的命令叫 `brew-guide`（跟它操作的那款应用同名）。不想全局装就用 `npx @fabianactor/brew-cli bean list`。
 
 从源码装：
 
