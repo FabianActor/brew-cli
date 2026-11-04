@@ -4,6 +4,8 @@
 
 数据和应用里看到的是同一份——手机上刷新就能看到你在终端里记的那一杯。
 
+每个版本改了什么见 [CHANGELOG.md](CHANGELOG.md)。
+
 ---
 
 ## 安装
@@ -238,7 +240,7 @@ npm link                      # 改完只想本地用：build 一次就生效
 >
 > 想验证包内容但不发布：`npm pack --dry-run`。
 >
-> 本地只想验证包内容用 `npm pack --dry-run`。
+> 改了用户可见的行为，记得在 [CHANGELOG.md](CHANGELOG.md) 里补一条。
 
 ## License
 

@@ -20,7 +20,9 @@
   ],
   "files": [
     "dist/",
-    "skills/"
+    "skills/",
+    "CHANGELOG.md",
+    "NOTICE"
   ],
   "bin": {
     "brew-guide": "./dist/main.js"

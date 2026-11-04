@@ -49,6 +49,7 @@ src/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
 docs/supabase.md       # authoritative Supabase conventions — read first for DB work
+CHANGELOG.md           # user-facing change log, one section per released version
 ```
 
 ## Supabase rules (critical — do not skip)
@@ -72,6 +73,7 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 2. Preserve soft-delete semantics unless the task explicitly changes deletion behavior.
 3. Do not change the `get_all_roasters()` contract without updating README and SQL.
 4. If payload shape assumptions change, update `docs/supabase.md`, README and the affected `skills/brew-guide/` reference in the same change.
+5. Any user-visible change gets a line in `CHANGELOG.md` under the unreleased-or-version section — added / changed / fixed / breaking, plus the upgrade command. Pending work belongs in the `[未发布]` section so it does not get lost.
 
 ## Code conventions
 
