@@ -18,8 +18,24 @@ import {
   todayLocalDate,
 } from '../../lib/beanInput.ts';
 import { flavorPeriodForRoastLevel, normalizeRoastLevel, BEAN_TYPES } from '../../lib/roast.ts';
+import { resolveFlavorPeriod, type FlavorPeriodSettings } from '../../lib/flavorPeriod.ts';
+import { fetchFlavorPeriodSettings } from '../../services/settings.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { upsertBeanRecord } from '../../tools/upsertBean.ts';
+
+/**
+ * 读 App 里的赏味期设置（烘焙商配置 / 全局自定义）。读不到就返回 undefined，
+ * 由调用方回落到兜底预设——设置是锦上添花，不该让新增豆子失败。
+ */
+async function loadFlavorPeriodSettings(): Promise<FlavorPeriodSettings | undefined> {
+  try {
+    const config = await resolveConfig();
+    const supabase = createSupabaseClient(config);
+    return await fetchFlavorPeriodSettings(supabase, config.brewGuideUserId);
+  } catch {
+    return undefined;
+  }
+}
 
 function parseDayArg(value: unknown, fallback: number, flag: string): number {
   if (typeof value !== 'string' || value.trim() === '') return fallback;
@@ -30,7 +46,10 @@ function parseDayArg(value: unknown, fallback: number, flag: string): number {
   return parsed;
 }
 
-function buildBeanData(args: Record<string, string | boolean | string[] | undefined>) {
+function buildBeanData(
+  args: Record<string, string | boolean | string[] | undefined>,
+  flavorSettings?: FlavorPeriodSettings,
+) {
   const normalizedCapacity = typeof args.capacity === 'string' ? normalizeWeight(args.capacity) : undefined;
 
   const beanData: Record<string, unknown> = {
@@ -120,9 +139,12 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
       warn('Warning: 生豆没有赏味期，--start-day / --end-day 已忽略。');
     }
   } else {
-    // 赏味期默认值与 App 同源（浅 7/60、中 10/60、深 14/90，烘焙度为空按中烘）。
-    // 以前固定 30/60，浅烘豆在 App 里会被算成「养豆期 30 天」，赏味期整段后移。
-    const period = flavorPeriodForRoastLevel(roastLevel);
+    // 赏味期跟着 App 的用户设置走：烘焙商配置 → 全局自定义 → 兜底预设
+    // （App 的优先级见 flavorPeriodUtils.ts:100-140）。以前固定 30/60，
+    // 浅烘豆在 App 里会被算成「养豆期 30 天」，赏味期整段后移。
+    const period = flavorSettings
+      ? resolveFlavorPeriod(roastLevel, typeof args.roaster === 'string' ? args.roaster : undefined, flavorSettings)
+      : flavorPeriodForRoastLevel(roastLevel);
     beanData.startDay = parseDayArg(args['start-day'], period.startDay, '--start-day');
     beanData.endDay = parseDayArg(args['end-day'], period.endDay, '--end-day');
   }
@@ -164,8 +186,8 @@ const argsDef = {
   'bean-type': { type: 'string', description: 'filter / espresso / omni，默认 filter。' },
   flavor: { type: 'string' },
   notes: { type: 'string' },
-  'start-day': { type: 'string', description: '养豆期结束的天数；默认按烘焙度取（浅 7 / 中 10 / 深 14）。' },
-  'end-day': { type: 'string', description: '赏味期结束的天数；默认按烘焙度取（浅 60 / 中 60 / 深 90）。' },
+  'start-day': { type: 'string', description: '养豆期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 7 / 中 10 / 深 14）。' },
+  'end-day': { type: 'string', description: '赏味期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 60 / 中 60 / 深 90）。' },
   'dry-run': { type: 'boolean' },
   format: { type: 'string' },
 } as const;
@@ -179,9 +201,28 @@ export default defineCommand({
   async run({ args }) {
     const logger = createCommandLogger(['bean', 'add'], args as Record<string, unknown>);
     assertKnownFlags(args as Record<string, unknown>, argsDef, 'bean add');
-    const beanData = buildBeanData(args as Record<string, string | boolean | string[] | undefined>);
     const dryRun = args['dry-run'] === true;
     const jsonFormat = args.format === 'json';
+
+    // 赏味期没显式给、又不是生豆时才去读设置：省掉一次请求，也让「给了 --start-day」的人
+    // 不因为读不到设置而被拖慢。
+    const beanStateArg =
+      typeof args['bean-state'] === 'string' && args['bean-state'].trim()
+        ? args['bean-state'].trim().toLowerCase()
+        : 'roasted';
+    const periodFlagsGiven = args['start-day'] !== undefined || args['end-day'] !== undefined;
+    let flavorSettings: FlavorPeriodSettings | undefined;
+    if (!periodFlagsGiven && beanStateArg !== 'green') {
+      flavorSettings = await loadFlavorPeriodSettings();
+      if (!flavorSettings && !dryRun) {
+        warn('Warning: 读不到 App 里的赏味期设置，按兜底预设填写（浅 7/60、中 10/60、深 14/90）。');
+      }
+    }
+
+    const beanData = buildBeanData(
+      args as Record<string, string | boolean | string[] | undefined>,
+      flavorSettings,
+    );
 
     if (dryRun) {
       if (jsonFormat) {

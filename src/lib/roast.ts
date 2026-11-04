@@ -68,13 +68,24 @@ export const FLAVOR_PERIOD_PRESETS: Record<'light' | 'medium' | 'dark', FlavorPe
   dark: { startDay: 14, endDay: 90 },
 };
 
+/** 赏味期三档（App 的 `FlavorPeriodMap`）。 */
+export type FlavorTier = 'light' | 'medium' | 'dark';
+
+/**
+ * 烘焙度 → 赏味期档位。与 App 的 `selectPeriodByRoastLevel`（flavorPeriodUtils.ts:52-56）一致：
+ * 含「浅」→ light、含「深」→ dark、其余（含空值）→ medium。
+ */
+export function flavorTierForRoastLevel(roastLevel?: string | null): FlavorTier {
+  const level = roastLevel ?? '';
+  if (level.includes('浅')) return 'light';
+  if (level.includes('深')) return 'dark';
+  return 'medium';
+}
+
 /**
  * 按烘焙度取赏味期默认值，规则与 App 完全一致：含「浅」→ light、含「深」→ dark、其余 medium。
  * 注意 App 只看烘焙度，不分 filter / espresso。
  */
 export function flavorPeriodForRoastLevel(roastLevel?: string): FlavorPeriod {
-  const level = roastLevel ?? '';
-  if (level.includes('浅')) return FLAVOR_PERIOD_PRESETS.light;
-  if (level.includes('深')) return FLAVOR_PERIOD_PRESETS.dark;
-  return FLAVOR_PERIOD_PRESETS.medium;
+  return FLAVOR_PERIOD_PRESETS[flavorTierForRoastLevel(roastLevel)];
 }
