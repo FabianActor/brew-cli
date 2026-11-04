@@ -127,6 +127,24 @@ brew-guide bean add \
 
 烘焙度不给就留空（以前会按豆种猜一个，猜错就污染 App 的筛选）。`--start-day` / `--end-day` 不给时按烘焙度取 App 的同一套预设：浅烘 7/60、中烘 10/60、深烘 14/90。
 
+状态相关的三个开关：
+
+```bash
+# 还没到手
+brew-guide bean add --name "..." --roaster "..." --origin "肯尼亚" --process "水洗" --in-transit
+
+# 冷冻保存（和在途互斥，开一个就把另一个关掉；取消用 --no-in-transit / --no-frozen）
+brew-guide bean update bean_xxx --is-frozen
+
+# 生豆（记购买日期，没有赏味期和烘焙度）
+brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "日晒" \
+  --bean-state green --purchase-date 2026-10-20
+```
+
+生豆和熟豆是两套日期语义：生豆记**购买日期**，熟豆记**烘焙日期**，App 不会同时显示两个。所以 `--bean-state green` 和 `--roast-date` 是冲突的，同时给会直接报错；转回熟豆要给 `--roast-date`，否则 App 里那颗豆会显示「未设置烘焙日期」。
+
+`--price` 只收数字（`88`、`88.5`，也认 `¥88`、`88元` 这种写法），存成字符串给 App 算「元/克」。
+
 拼配用可重复的 `--component`：
 ```bash
 brew-guide bean add --name "三重奏" --roaster "TRIOON" \
@@ -153,6 +171,8 @@ brew-guide bean consume bean_xxx --amount 15
 ```
 
 `--rating` 只收 0-5（超范围直接报错）；`--water-temp` 收 `92` 或 `92°C`，一律写成 `92°C`；`--equipment` 会校验，内置 V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso 直接认，自定义器具要写 `equipment list` 里的 ID。
+
+给了 `--bean-id` 时，记录里会自动存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 里点「记录一杯」一样；以后豆子改名，旧记录仍显示当时的样子。
 
 ### 4. 管器具和配方
 

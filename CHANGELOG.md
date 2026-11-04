@@ -16,14 +16,24 @@
 
 ## [未发布]
 
-计划中、还没动的部分（等你决定优先级）：
+已实现、还没发版（版本号会是 0.3.0）：
 
-- `bean add --in-transit` 标记在途豆（现在一律写 `isInTransit: false`，只能在 App 里改）
-- 生豆支持：`--bean-state green` 与购买日期语义（现在固定 `roasted`）
-- `--price` 格式校验
-- `--is-frozen`（现在固定 `false`）
-- `note add` 补写 `methodId` / `coffeeBeanInfo`（现在只写 `equipmentId`）
-- 不让 `c12` 读当前目录的 `.env`（配置文件以外的环境变量来源应显式）
+### 新增
+
+- **`--in-transit` / `--is-frozen`**（`bean add`、`bean update`）：新建豆默认「已到手」，在途和冷冻都能直接标，取消用 `--no-in-transit` / `--no-frozen`。两个是互斥状态，开一个自动关掉另一个，同时给会报错。
+- **生豆**：`--bean-state green` + `--purchase-date`。生豆记购买日期（不给就填今天），没有烘焙日期、没有赏味期；`--bean-state green` 与 `--roast-date` 冲突会直接报错。`bean update <id> --bean-state roasted` 转回熟豆。
+- **`note add --bean-id` 自动写 `coffeeBeanInfo`**：存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 点「记录一杯」的行为一致；以后豆子改名，旧记录仍显示当时的样子。
+
+### 修复
+
+- **`--price` 不校验**：以前 `abc` 也照写，App 详情页算「元/克」时出 `NaN`。现在只收数字（最多两位小数），顺手容错 `¥88`、`88元`。
+- **`upsertBeanRecord` 把修好的写入语义又覆盖回去**：这个工具层还留着旧兜底——没烘焙度就写「浅度烘焙」、赏味期硬填 `30/60`、有烘焙日期就把在途改成 `false`。上一版只修了命令层，实测生豆仍被写成 `startDay=30`、在途豆仍被写成已到手。现在这一层只补形状默认值（`beanType`、`beanState`、`isFrozen`），不替用户猜内容。
+- **`c12` 会读当前目录的 `.env`**：以前在别的项目目录里跑，那边恰好有 `BREW_GUIDE_*` / `SUPABASE_*` 的 `.env`，就会悄悄换成另一个库。现在只读配置文件和 shell 里真正导出的环境变量。
+
+### 计划中
+
+- `note add` 的 `methodId`（库里的记录 0 条用到，暂不做）
+- 赏味期跟随用户的 `appSettings.customFlavorPeriod` / `roasterConfigs`（现在只用 App 的兜底预设）
 
 ## [0.2.2] - 2026-11-04
 

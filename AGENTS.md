@@ -44,7 +44,7 @@ src/
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters
   tools/               # upsertBean.ts / upsertNote.ts — thin adapters over services
-  lib/                 # args exit output query summary weights ids blendComponents crudCommands timestamps toolResults roast noteInput equipmentTypes
+  lib/                 # args exit output query summary weights ids blendComponents beanInput crudCommands timestamps toolResults roast noteInput equipmentTypes
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
@@ -64,6 +64,8 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - Soft delete via `deleted_at`. Every write sets `deleted_at: null`, so writing to a soft-deleted id **revives** it. Lists read `deleted_at is null` only.
 - Time values inside `data` are **milliseconds since epoch**, not ISO strings (`timestamp`, `updatedAt`).
 - Origin lives in `data.blendComponents[]`; flat flags (`--origin`, `--region`, …) are merged into the first component and removed from the top level on write.
+- Bean state: `data.beanState` is `roasted` (default) or `green`. Green beans carry `purchaseDate` and have **no** `roastDate`, `roastLevel`, `startDay` or `endDay` — the app swaps 「烘焙日期」for 「购买日期」. `isInTransit` and `isFrozen` are mutually exclusive display states, both default `false`.
+- Never invent bean content that the caller did not provide: roast level, flavor period (`startDay`/`endDay`) and in-transit used to be filled with guesses in `src/tools/upsertBean.ts`, which silently overrode whatever the command layer decided. Only shape defaults (`beanType`, `beanState`, `isFrozen`) belong there.
 - `custom_methods` is **one row per equipment**, not per method: `data.equipmentId` + `data.methods[]`, each method `{ id: 'method-<ms>-<7 chars>', name, params{…}, timestamp }`. Method ids must come from `src/lib/ids.ts` so the equipment ↔ methods join keeps working.
 - `roasters` depends on the Postgres RPC `public.get_all_roasters()`. That function is **not** in brew-guide's schema; any fresh Supabase project needs the DDL from README.
 

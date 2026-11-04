@@ -38,7 +38,7 @@
 - `notes`, `timestamp`, `totalTime`, `source`
 - `params.{temp, ratio, water, coffee, grindSize, stages}`
 - `equipment`（equipment 行 ID）
-- `coffeeBeanInfo`
+- `coffeeBeanInfo`（豆子快照：`{name, roastLevel, roastDate, roaster?}`）——CLI 传了 `--bean-id` 就会自动写入，取自豆子当时的字段；App 也这么做（`page.tsx:211-216`），以后豆子改名，旧记录仍显示当时的样子。不用手动传。
 
 ## 2. 查 beanId
 

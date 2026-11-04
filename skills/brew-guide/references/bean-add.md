@@ -105,17 +105,30 @@ brew-guide roasters --format json
 ## 4. 默认值规则
 
 - `beanType` 没给时，默认按 `filter`
-- `beanType = filter` 且没给 `roastLevel` 时，默认 `浅度烘焙`
-- `beanType = espresso` 且没给 `roastLevel` 时，默认 `中深烘焙`
-- `startDay / endDay` CLI 固定 `30 / 60`，无 flag 可覆盖
+- `roastLevel` **不给就留空**，不按豆种猜（App 里烘焙度空着是正常状态，猜错会污染筛选）
+- `startDay / endDay` 不给时按烘焙度取 App 的同一套预设（`flavorPeriodUtils.ts:27-31`）：浅烘 7/60、中烘 10/60、深烘 14/90，烘焙度为空按中烘；要改就用 `--start-day` / `--end-day`
+- `isInTransit` / `isFrozen` 默认都是 `false`（=已到手、没冷冻）
+- `beanState` 默认 `roasted`；`green`（生豆）要显式传
+- `price` 只收数字（最多两位小数），存字符串
 
-## 5. 在途豆规则
+## 5. 在途、冷冻与生豆
 
-- 如果豆子还没收到，可以直接新增
-- 在途豆允许没有 `roastDate`
-- agent 不要因为缺少 `roastDate` 就阻止创建
-- 但仍要尽量收集 `name / roaster / origin / process`
-- ⚠️ CLI **没有** `--in-transit`（也还不能建生豆）：`bean add` 一律写 `isInTransit: false`，跟 App 的默认值一致。以前缺 `roastDate` 时会自动打成「在途」，豆子卡片上就挂着「在途」标记——那个行为已经去掉。要标在途，让用户在 App 里改。
+**在途**：豆子还在路上时直接建档，不用等收货——`--in-transit`。在途豆允许没有 `roastDate`，agent 不要因为这个阻止创建，但仍要尽量收集 `name / roaster / origin / process`。
+
+**冷冻**：`--is-frozen`。在途和冷冻在 App 里是互斥的两个状态，CLI 开一个会自动关掉另一个；两个同时给会报错。取消用 `--no-in-transit` / `--no-frozen`。
+
+**生豆**：`--bean-state green`（默认 `roasted`）。生豆记的是**购买日期**（`--purchase-date`，不给就填今天），没有烘焙日期、没有赏味期：
+
+- `--bean-state green` 与 `--roast-date` 冲突，会直接报错
+- 生豆上给 `--roast-level` 会被忽略并提醒
+- 从生豆转熟豆（`bean update <id> --bean-state roasted --roast-date ...`），不给 `--roast-date` 会提醒「App 里会显示未设置烘焙日期」
+
+```bash
+# 在途
+brew-guide bean add --name "..." --roaster "..." --origin "肯尼亚" --process "水洗" --in-transit
+# 生豆
+brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "日晒" --bean-state green
+```
 
 在途豆示例：
 
