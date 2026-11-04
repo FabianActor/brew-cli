@@ -19,3 +19,18 @@ export function exitWithError(message: string, code: ExitCode): never {
   console.error(message);
   process.exit(code);
 }
+
+/**
+ * 把异常分流成退出码：配置缺失 64、Supabase 请求失败 65，其余 1。
+ * 错误文案沿用历史格式（`Error: Config …` / `Error: Network …`），避免破坏已有断言。
+ */
+export function exitForError(error: unknown): never {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/Missing|Config error/i.test(message)) {
+    exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
+  }
+  if (/^Failed to (list|fetch|delete|upsert) /i.test(message)) {
+    exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+  }
+  exitWithError(`Error: ${message}`, EXIT.FAILURE);
+}
