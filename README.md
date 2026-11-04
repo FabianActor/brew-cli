@@ -93,6 +93,7 @@ brew-guide bean add --name "三重奏" --roaster "TRIOON" \
 > **可选参数说明**：除成分字段外，还可提供 `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--flavor`, `--notes` 完善咖啡豆信息。
 > 成分字段（`--origin/--country/--region/--estate/--processing-station/--process/--variety/--altitude/--batch/--percentage`）作用于第一个成分；`update` 时可用 `--component-index N` 指定第几个成分（从 1 开始），或 `--component` 整组替换。
 > `bean add` / `bean update` 会校验参数名：拼错的 flag 直接 `exit 2` 并列出可用参数，不会静默忽略。
+> `bean list` 支持筛选：`--roast-level`, `--bean-type`, `--roaster`, `--region`, `--process`, `--variety`, `--has-remaining true|false`。产区/处理法/品种是**包含匹配**（`--region 古吉` 能命中「古吉 罕贝拉」）。
 
 ### 管理冲煮记录 (`note`)
 
@@ -110,6 +111,19 @@ brew-guide note add --bean-id "YOUR_BEAN_ID" --method "V60"
 > **可选参数说明**：`--notes`, `--rating`, `--total-time`, `--source`, `--equipment`, `--taste-body/--taste-acidity/--taste-sweetness/--taste-bitterness` 为当前真实字段；
 > `--coffee`, `--water`, `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 是兼容旧脚本的别名，会被归一到真实字段（`--coffee/--water` 进 `params.coffee` / `params.water`）。
 > `--bean-id` 会在写入前校验豆子是否存在；未声明的 flag 会 `exit 2` 并列出可用参数。
+> `note list` 支持 `--equipment`, `--method`, `--bean-id`, `--min-rating`, `--from`, `--to`（日期可用 `YYYY-MM-DD` 或 ISO 时间，含当天）。
+
+### 备份 (`backup`)
+
+```bash
+# 导出全部表到本地 JSON（默认 brew-guide-backup-<timestamp>.json）
+brew-guide backup
+
+# 指定路径；--include-deleted false 只导未软删的行
+brew-guide backup --out "D:\backups\brew-2026-11.json"
+```
+
+导出 `coffee_beans`、`brewing_notes`、`custom_equipments`、`custom_methods`、`user_settings` 的原始行（含 `deleted_at`），可直接当离线备份。
 
 ### 查看烘焙商 (`roasters`)
 
@@ -125,7 +139,7 @@ brew-guide roasters
 
 无论是 `add` 还是查询列表，大多数命令支持以下可选修饰参数：
 
-- `--format json`: 将输出内容严格格式化为 JSON 字符串。不仅方便终端查看，且非常适合用于后续脚本处理或其他自动化工具读取。
+- `--format json`: 将输出内容严格格式化为 JSON 字符串。不仅方便终端查看，且非常适合用于后续脚本处理或其他自动化工具读取。JSON 走 stdout 且是单行紧凑格式；警告、进度、错误一律走 stderr，方便 `| jq` 或管道。
 - `--dry-run`: 仅可用在写入操作中（如 `add`），终端会打印将插入到 Supabase 中的载荷数据，但不发送真实网络请求。
 
 ## 数据约束

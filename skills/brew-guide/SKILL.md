@@ -45,18 +45,18 @@ brew-guide init
 | 子命令 | 用途 | 示例 |
 |---|---|---|
 | `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." --roaster "..." --origin "..." --process "..." [--region ...] [--estate ...] [--processing-station ...] [--altitude ...] [--variety ...] [--batch ...] [--start-day 30] [--end-day 60] [options] [--dry-run]`；拼配加可重复的 `--component "origin=…;percentage=33"` |
-| `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--has-remaining true] [--format json]` |
+| `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--roaster "MAME"] [--region 古吉] [--process 日晒] [--variety 74158] [--has-remaining true] [--format json]`（产区/处理法/品种是包含匹配，`--region 古吉` 命中「古吉 罕贝拉」） |
 | `bean get` | 详情 | `brew-guide bean get <id> [--format json]` |
 | `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--region "..."] [--processing-station "..."] [--altitude "..."] [--process "..."] [--variety "..."] [--estate "..."] [--batch "..."] [--percentage 33] [--component-index 2] [--component "origin=…;percentage=50"] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--dry-run]`（成分字段合并进 `--component-index` 指定的成分，默认第 1 个；`--component` 整组替换）|
 | `bean delete` | 软删除 | `brew-guide bean delete <id> [--dry-run]` |
-| `bean consume` | 扣减余量 | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]` |
+| `bean consume` | 扣减余量 | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]`；请求量超过库存时余量归零并在 stderr 警告，`--with-note` 只记实际扣掉的量 |
 
 ### note — 冲煮记录
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
 | `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]`（`--bean-id` 必须指向存在的活豆，否则直接报错） |
-| `note list` | 列出 | `brew-guide note list [--limit N] [--equipment V60] [--method 日式] [--bean-id "..."] [--min-rating 3.5] [--format json]` |
+| `note list` | 列出 | `brew-guide note list [--limit N] [--equipment V60] [--method 日式] [--bean-id "..."] [--min-rating 3.5] [--from 2026-01-01] [--to 2026-12-31] [--format json]`（日期含当天，`--from` 晚于 `--to` 直接报错） |
 | `note get` | 详情 | `brew-guide note get <id> [--format json]` |
 | `note update` | 更新 | `brew-guide note update <id> --rating 4 --notes "..." [--equipment "V60"] [--total-time 150] [--source tag] [--ratio "1:15"] [--grind-size "..."] [--water-temp 92] [--coffee "15g"] [--water "225g"] [--taste-body 4] [--dry-run]`（`--rating` / `--taste-*` 0–5；taste / params 部分更新与现有值合并）|
 | `note delete` | 软删除 | `brew-guide note delete <id> [--dry-run]` |
@@ -91,10 +91,18 @@ brew-guide init
 brew-guide roasters [--format json]
 ```
 
+### backup — 整库备份
+
+```bash
+brew-guide backup [--out "D:\backups\brew.json"] [--include-deleted false] [--format json]
+```
+
+导出 `coffee_beans` / `brewing_notes` / `custom_equipments` / `custom_methods` / `user_settings` 的原始行。默认带软删行，默认文件名 `brew-guide-backup-<timestamp>.json`。**改库前先跑一次**。
+
 ### 通用 flags
 
 - `--dry-run`：预览即将执行的操作，不实际写入
-- `--format json`：以 JSON 格式输出
+- `--format json`：以 JSON 格式输出（stdout 单行紧凑；警告与错误走 stderr，可直接管道给 `jq`）
 
 退出码：`0` 成功 / `1` 运行时失败 / `2` 参数用法错误 / `64` 缺少或错误的配置 / `65` 网络请求失败。看到 `2` 先改参数，别重试。
 
