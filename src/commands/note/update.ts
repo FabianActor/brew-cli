@@ -2,11 +2,21 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
+import { nonEmptyString } from '../../lib/args.ts';
+import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { updateNote } from '../../services/notes.ts';
 
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
+/** 解析 0-5 的评分字段，非法时直接按用法错误退出。 */
+function parseScore(value: unknown, flag: string): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  if (value.trim() === '') {
+    exitWithError(`Error: ${flag} 不能是空字符串（想去掉评分请用 --rating 给 0）`, EXIT.USAGE);
+  }
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) {
+    exitWithError(`Error: ${flag} must be a number between 0 and 5.`, EXIT.USAGE);
+  }
+  return parsed;
 }
 
 export default defineCommand({
@@ -39,60 +49,57 @@ export default defineCommand({
     const logger = createCommandLogger(['note', 'update'], args as Record<string, unknown>);
 
     const updates: Record<string, unknown> = {};
-    if (typeof args.rating === 'string') {
-      const r = Number.parseFloat(args.rating);
-      if (!Number.isFinite(r) || r < 0 || r > 5) {
-        console.error('Error: --rating must be a number between 0 and 5.');
-        process.exit(2);
-      }
-      updates.rating = r;
-    }
-    if (typeof args.method === 'string') updates.method = args.method;
-    if (typeof args.equipment === 'string') updates.equipment = args.equipment;
+
+    const rating = parseScore(args.rating, '--rating');
+    if (rating !== undefined) updates.rating = rating;
+
+    const method = nonEmptyString(args.method, '--method');
+    if (method !== undefined) updates.method = method;
+    const equipment = nonEmptyString(args.equipment, '--equipment');
+    if (equipment !== undefined) updates.equipment = equipment;
+
+    // notes 允许显式清空：--notes "" 就是"清掉备注"，这是唯一合法的空字符串。
     if (typeof args.notes === 'string') updates.notes = args.notes;
     else if (typeof args.memo === 'string') updates.notes = args.memo;
+
     if (typeof args['total-time'] === 'string' && args['total-time']) {
-      const n = Number.parseFloat(args['total-time']);
-      if (!Number.isFinite(n) || n < 0) {
-        console.error('Error: --total-time must be a non-negative number (seconds).');
-        process.exit(2);
+      const totalTime = Number.parseFloat(args['total-time']);
+      if (!Number.isFinite(totalTime) || totalTime < 0) {
+        exitWithError('Error: --total-time must be a non-negative number (seconds).', EXIT.USAGE);
       }
-      updates.totalTime = n;
+      updates.totalTime = totalTime;
     }
-    if (typeof args.source === 'string' && args.source) updates.source = args.source;
+
+    const source = nonEmptyString(args.source, '--source');
+    if (source !== undefined) updates.source = source;
 
     const paramsPatch: Record<string, unknown> = {};
-    if (typeof args.ratio === 'string' && args.ratio) paramsPatch.ratio = args.ratio;
-    if (typeof args['grind-size'] === 'string' && args['grind-size']) paramsPatch.grindSize = args['grind-size'];
+    const ratio = nonEmptyString(args.ratio, '--ratio');
+    if (ratio !== undefined) paramsPatch.ratio = ratio;
+    const grindSize = nonEmptyString(args['grind-size'], '--grind-size');
+    if (grindSize !== undefined) paramsPatch.grindSize = grindSize;
     if (typeof args['water-temp'] === 'string' && args['water-temp']) {
-      const n = Number.parseFloat(args['water-temp']);
-      if (!Number.isFinite(n)) {
-        console.error('Error: --water-temp must be a number.');
-        process.exit(2);
+      const temp = Number.parseFloat(args['water-temp']);
+      if (!Number.isFinite(temp)) {
+        exitWithError('Error: --water-temp must be a number.', EXIT.USAGE);
       }
-      paramsPatch.temp = `${n}°C`;
+      paramsPatch.temp = `${temp}°C`;
     }
-    if (typeof args.coffee === 'string' && args.coffee) paramsPatch.coffee = args.coffee;
-    if (typeof args.water === 'string' && args.water) paramsPatch.water = args.water;
+    const coffee = nonEmptyString(args.coffee, '--coffee');
+    if (coffee !== undefined) paramsPatch.coffee = coffee;
+    const water = nonEmptyString(args.water, '--water');
+    if (water !== undefined) paramsPatch.water = water;
     if (Object.keys(paramsPatch).length > 0) updates.params = paramsPatch;
 
     const taste: Record<string, number> = {};
     for (const key of ['body', 'acidity', 'sweetness', 'bitterness'] as const) {
-      const raw = (args as Record<string, unknown>)[`taste-${key}`];
-      if (typeof raw === 'string' && raw) {
-        const n = Number.parseFloat(raw);
-        if (!Number.isFinite(n) || n < 0 || n > 5) {
-          console.error(`Error: --taste-${key} must be between 0 and 5.`);
-          process.exit(2);
-        }
-        taste[key] = n;
-      }
+      const parsed = parseScore((args as Record<string, unknown>)[`taste-${key}`], `--taste-${key}`);
+      if (parsed !== undefined) taste[key] = parsed;
     }
     if (Object.keys(taste).length > 0) updates.taste = taste;
 
     if (Object.keys(updates).length === 0) {
-      console.error('No fields to update. Use --rating, --method, --memo, --notes, --equipment.');
-      process.exit(2);
+      exitWithError('No fields to update. Use --rating, --method, --memo, --notes, --equipment.', EXIT.USAGE);
     }
 
     if (args['dry-run']) {
@@ -111,9 +118,8 @@ export default defineCommand({
       const result = await updateNote(supabase, args.id, updates, config.brewGuideUserId);
 
       if (!result) {
-        console.error(`Note ${args.id} not found.`);
         await logger.error(`Note ${args.id} not found`);
-        process.exit(1);
+        exitWithError(`Note ${args.id} not found.`, EXIT.FAILURE);
       }
 
       if (args.format === 'json') {
@@ -126,7 +132,13 @@ export default defineCommand({
     } catch (error) {
       await logger.error(error);
       const message = error instanceof Error ? error.message : String(error);
-      exitWithError(`Error: ${message}`, 1);
+      if (/Missing|Config error/i.test(message)) {
+        exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
+      }
+      if (/^Failed to (update|list|fetch|get)/i.test(message)) {
+        exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+      }
+      exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }
   },
 });

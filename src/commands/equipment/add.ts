@@ -27,6 +27,7 @@ export default defineCommand({
     },
     'has-valve': { type: 'boolean', default: false, description: 'Whether it has a valve (for immersion).' },
     note: { type: 'string', default: '', description: 'Note about the equipment.' },
+    force: { type: 'boolean', default: false, description: 'Overwrite the existing equipment with the same ID.' },
     'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
     format: { type: 'string' },
   },
@@ -61,6 +62,7 @@ export default defineCommand({
         equipmentData.note,
         config.brewGuideUserId,
         typeof args.id === 'string' && args.id.trim() ? args.id.trim() : undefined,
+        { force: args.force === true },
       );
 
       if (args.format === 'json') {

@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/swiftwind0405/brew-guide-cli"
+    "url": "https://github.com/FabianActor/brew-guide-cli"
   },
   "keywords": [
     "cli",
@@ -38,11 +38,12 @@
   },
   "scripts": {
     "build": "tsup",
-    "build:watch": "tsup --watch --onSuccess \"chmod +x dist/main.js\"",
-    "postbuild": "chmod +x dist/main.js",
+    "build:watch": "tsup --watch --onSuccess \"node scripts/chmod-bin.mjs\"",
+    "postbuild": "node scripts/chmod-bin.mjs",
     "dev": "tsx src/main.ts",
     "test": "npx tsc && node --import tsx --test",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run typecheck && npm run build"
   }
 }
+

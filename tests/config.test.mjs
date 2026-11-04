@@ -119,7 +119,11 @@ test('resolveConfig throws when no credentials are available', async (t) => {
   });
 });
 
-test('resolveConfig warns when config file permissions are too broad', async (t) => {
+// Windows 没有 POSIX 权限位（stat.mode 恒为 0666），resolveConfig 在该平台不做检查，
+// 所以这一组断言只在类 Unix 上成立。
+const posixOnly = process.platform === 'win32' ? { skip: 'POSIX permissions are not available on Windows' } : {};
+
+test('resolveConfig warns when config file permissions are too broad', posixOnly, async (t) => {
   await withSandbox(t, async ({ configPath }) => {
     delete process.env.BREW_GUIDE_SUPABASE_URL;
     delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
@@ -158,3 +162,44 @@ test('resolveConfig warns when config file permissions are too broad', async (t)
     assert.match(stderr.join(''), /Warning: config file has insecure permissions/i);
   });
 });
+
+test(
+  'resolveConfig does not warn about file permissions on Windows',
+  process.platform === 'win32' ? {} : { skip: 'Windows behaviour only' },
+  async (t) => {
+    await withSandbox(t, async ({ configPath }) => {
+      delete process.env.BREW_GUIDE_SUPABASE_URL;
+      delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+      delete process.env.BREW_GUIDE_USER_ID;
+
+      await fs.writeFile(
+        configPath,
+        JSON.stringify({
+          supabaseUrl: 'https://warning.supabase.co',
+          supabaseServiceRoleKey: 'warning-key',
+        }),
+        'utf8',
+      );
+
+      const stderr = [];
+      const originalWrite = process.stderr.write.bind(process.stderr);
+      process.stderr.write = ((chunk, encoding, callback) => {
+        stderr.push(String(chunk));
+        if (typeof encoding === 'function') {
+          encoding();
+        } else if (typeof callback === 'function') {
+          callback();
+        }
+        return true;
+      });
+
+      t.after(() => {
+        process.stderr.write = originalWrite;
+      });
+
+      await resolveConfig();
+
+      assert.doesNotMatch(stderr.join(''), /insecure permissions/i);
+    });
+  },
+);

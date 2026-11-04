@@ -2,17 +2,15 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
+import { nonEmptyString } from '../../lib/args.ts';
 import {
   assertComponentsUsable,
   buildBlendComponents,
   componentFromFlags,
 } from '../../lib/blendComponents.ts';
+import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { normalizeWeight } from '../../lib/weights.ts';
 import { updateBean } from '../../services/beans.ts';
-
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
-}
 
 export default defineCommand({
   meta: {
@@ -54,12 +52,19 @@ export default defineCommand({
     const logger = createCommandLogger(['bean', 'update'], args as Record<string, unknown>);
 
     const updates: Record<string, unknown> = {};
-    if (typeof args.name === 'string') updates.name = args.name;
-    if (typeof args.roaster === 'string') updates.roaster = args.roaster;
-    if (typeof args['roast-level'] === 'string') updates.roastLevel = args['roast-level'];
-    if (typeof args.capacity === 'string') updates.capacity = args.capacity;
-    if (typeof args.remaining === 'string') updates.remaining = args.remaining;
-    if (typeof args.price === 'string') updates.price = args.price;
+    const name = nonEmptyString(args.name, '--name', '要改名字请给具体值');
+    if (name !== undefined) updates.name = name;
+    const roasterName = nonEmptyString(args.roaster, '--roaster');
+    if (roasterName !== undefined) updates.roaster = roasterName;
+    const roastLevel = nonEmptyString(args['roast-level'], '--roast-level');
+    if (roastLevel !== undefined) updates.roastLevel = roastLevel;
+    const capacity = nonEmptyString(normalizeWeight(args.capacity), '--capacity', '用 150 或 150g');
+    if (capacity !== undefined) updates.capacity = capacity;
+    const remaining = nonEmptyString(normalizeWeight(args.remaining), '--remaining', '用 120 或 120g');
+    if (remaining !== undefined) updates.remaining = remaining;
+    const price = nonEmptyString(args.price, '--price');
+    if (price !== undefined) updates.price = price;
+    // notes 允许显式清空：--notes "" 视为"清掉备注"，这是唯一合法的空值。
     if (typeof args.notes === 'string') updates.notes = args.notes;
     const componentSpecs = Array.isArray(args.component)
       ? args.component
@@ -76,18 +81,15 @@ export default defineCommand({
       Object.assign(updates, componentFlags);
       const rawIndex = typeof args['component-index'] === 'string' ? Number(args['component-index']) : 1;
       if (!Number.isInteger(rawIndex) || rawIndex < 1) {
-        console.error('Error: --component-index 必须是从 1 开始的整数。');
-        process.exit(2);
+        exitWithError('Error: --component-index 必须是从 1 开始的整数。', EXIT.USAGE);
       }
       updates.componentIndex = rawIndex - 1;
     } else if (typeof args['component-index'] === 'string') {
-      console.error('Error: --component-index 要配合成分字段（--origin / --region / --altitude …）使用。');
-      process.exit(2);
+      exitWithError('Error: --component-index 要配合成分字段（--origin / --region / --altitude …）使用。', EXIT.USAGE);
     }
     if (typeof args['roast-date'] === 'string' && args['roast-date']) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(args['roast-date'])) {
-        console.error('Error: --roast-date must be YYYY-MM-DD.');
-        process.exit(2);
+        exitWithError('Error: --roast-date must be YYYY-MM-DD.', EXIT.USAGE);
       }
       updates.roastDate = args['roast-date'];
       updates.isInTransit = false;
@@ -95,23 +97,20 @@ export default defineCommand({
     if (typeof args['start-day'] === 'string' && args['start-day']) {
       const n = Number(args['start-day']);
       if (!Number.isFinite(n) || n < 0) {
-        console.error('Error: --start-day must be a non-negative number.');
-        process.exit(2);
+        exitWithError('Error: --start-day must be a non-negative number.', EXIT.USAGE);
       }
       updates.startDay = n;
     }
     if (typeof args['end-day'] === 'string' && args['end-day']) {
       const n = Number(args['end-day']);
       if (!Number.isFinite(n) || n < 0) {
-        console.error('Error: --end-day must be a non-negative number.');
-        process.exit(2);
+        exitWithError('Error: --end-day must be a non-negative number.', EXIT.USAGE);
       }
       updates.endDay = n;
     }
 
     if (Object.keys(updates).length === 0) {
-      console.error('No fields to update. Use --name, --roaster, etc.');
-      process.exit(2);
+      exitWithError('No fields to update. Use --name, --roaster, etc.', EXIT.USAGE);
     }
 
     if (args['dry-run']) {
@@ -130,9 +129,8 @@ export default defineCommand({
       const result = await updateBean(supabase, args.id, updates, config.brewGuideUserId);
 
       if (!result) {
-        console.error(`Bean ${args.id} not found.`);
         await logger.error(`Bean ${args.id} not found`);
-        process.exit(1);
+        exitWithError(`Bean ${args.id} not found.`, EXIT.FAILURE);
       }
 
       if (args.format === 'json') {
@@ -145,7 +143,8 @@ export default defineCommand({
     } catch (error) {
       await logger.error(error);
       const message = error instanceof Error ? error.message : String(error);
-      exitWithError(`Error: ${message}`, 1);
+      exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }
   },
 });
+

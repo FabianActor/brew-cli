@@ -110,6 +110,47 @@ function normalizeNote(input: Record<string, unknown>): Record<string, unknown> 
 }
 
 /**
+ * 写入一条冲煮记录（结构化入口）。
+ *
+ * CLI 与 MCP 工具共用：返回真实 id / timestamp，调用方不必再从工具文案里抠 ID。
+ * 失败直接抛错，错误信息由调用方决定怎么呈现。
+ */
+export async function upsertNoteRecord(
+  supabase: SupabaseClient,
+  config: BrewGuideConfig,
+  note: Record<string, unknown>,
+): Promise<{ id: string; timestamp: string }> {
+  const id = (note.id as string) || generateId('note');
+  const normalized = normalizeNote(note);
+  const dataJson = JSON.stringify(normalized);
+  if (dataJson.length > 64_000) {
+    throw new Error('Note data exceeds 64 KB limit. Reduce payload size before retrying.');
+  }
+
+  const ts = now();
+
+  // deleted_at: null 确保 upsert 同时恢复已软删除的记录
+  const { error } = await supabase
+    .from('brewing_notes')
+    .upsert(
+      {
+        id,
+        user_id: config.brewGuideUserId,
+        data: { ...normalized, id },
+        updated_at: ts,
+        deleted_at: null,
+      },
+      { onConflict: 'id,user_id' },
+    );
+
+  if (error) {
+    throw new Error(`Failed to upsert note: ${error.message}`);
+  }
+
+  return { id, timestamp: ts };
+}
+
+/**
  * 执行冲煮记录 upsert 操作。
  */
 export async function executeUpsertNote(
@@ -121,37 +162,11 @@ export async function executeUpsertNote(
     return invalidParamsResult('brew_guide_upsert_note', '{ note: object }');
   }
 
-  const note = params.note;
-  const id = (note.id as string) || generateId('note');
-  const normalized = normalizeNote(note);
-  const dataJson = JSON.stringify(normalized);
-  if (dataJson.length > 64_000) {
-    return textResult('Note data exceeds 64 KB limit. Reduce payload size before retrying.');
-  }
-
-  const ts = now();
-
   try {
-    // deleted_at: null 确保 upsert 同时恢复已软删除的记录
-    const { error } = await supabase
-      .from('brewing_notes')
-      .upsert(
-        {
-          id,
-          user_id: config.brewGuideUserId,
-          data: { ...normalized, id },
-          updated_at: ts,
-          deleted_at: null,
-        },
-        { onConflict: 'id,user_id' },
-      );
-
-    if (error) {
-      return textResult(`Failed to upsert note: ${error.message}`);
-    }
-
-    return textResult(`Upserted brewing note ${id} at ${ts}.`);
+    const { id, timestamp } = await upsertNoteRecord(supabase, config, params.note);
+    return textResult(`Upserted brewing note ${id} at ${timestamp}.`);
   } catch (error) {
-    return textResult(`Failed to upsert note: ${getErrorMessage(error)}`);
+    const message = getErrorMessage(error);
+    return textResult(/^Failed to upsert note:/.test(message) ? message : `Failed to upsert note: ${message}`);
   }
 }

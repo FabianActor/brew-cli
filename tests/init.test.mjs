@@ -41,7 +41,10 @@ test('brew-guide init creates a config file with 600 permissions', async (t) => 
   assert.equal(saved.supabaseUrl, 'https://init.supabase.co');
   assert.equal(saved.supabaseServiceRoleKey, 'service-role-key');
   assert.equal(saved.brewGuideUserId, 'cli-user');
-  assert.equal(stat.mode & 0o777, 0o600);
+  // Windows 没有 POSIX 权限位，chmod 是空操作，只在类 Unix 上断言 0600。
+  if (process.platform !== 'win32') {
+    assert.equal(stat.mode & 0o777, 0o600);
+  }
 });
 
 test('brew-guide init exits without creating a file when stdin closes immediately', async (t) => {

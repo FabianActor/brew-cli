@@ -7,16 +7,10 @@ import {
   buildBlendComponents,
   componentFromFlags,
 } from '../../lib/blendComponents.ts';
-import { executeUpsertBean } from '../../tools/upsertBean.ts';
+import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { normalizeWeight } from '../../lib/weights.ts';
+import { upsertBeanRecord } from '../../tools/upsertBean.ts';
 
-function normalizeWeight(value: string | undefined) {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const normalized = value.replace(/\s+/g, '').replace(/(g|G|克)$/u, '');
-  return normalized || undefined;
-}
 
 function buildBeanData(args: Record<string, string | boolean | string[] | undefined>) {
   const normalizedCapacity = typeof args.capacity === 'string' ? normalizeWeight(args.capacity) : undefined;
@@ -34,8 +28,7 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
   }
   if (typeof args['roast-date'] === 'string' && args['roast-date']) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args['roast-date'])) {
-      console.error('Error: --roast-date must be YYYY-MM-DD.');
-      process.exit(2);
+      exitWithError('Error: --roast-date must be YYYY-MM-DD.', EXIT.USAGE);
     }
     beanData.roastDate = args['roast-date'];
     beanData.isInTransit = false;
@@ -80,10 +73,6 @@ function buildBeanData(args: Record<string, string | boolean | string[] | undefi
   return beanData;
 }
 
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
-}
 
 export default defineCommand({
   meta: {
@@ -141,27 +130,8 @@ export default defineCommand({
     try {
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
-      const result = await executeUpsertBean(supabase, config, { bean: beanData });
-      const text = result.content[0]?.text ?? '';
+      const { id, timestamp } = await upsertBeanRecord(supabase, config, beanData);
 
-      if (/64 KB/i.test(text)) {
-        await logger.error(text);
-        exitWithError(text, 1);
-      }
-
-      if (/^Failed to upsert bean:/i.test(text)) {
-        await logger.error(text);
-        exitWithError(`Error: ${text}`, 65);
-      }
-
-      const match = text.match(/coffee bean (bean_[^\s]+) at ([^\.\n]+)/i);
-      if (!match) {
-        console.log(text);
-        await logger.success();
-        return;
-      }
-
-      const [, id, timestamp] = match;
       if (jsonFormat) {
         console.log(JSON.stringify({ id, status: 'created', timestamp }));
         await logger.success();
@@ -174,9 +144,13 @@ export default defineCommand({
       await logger.error(error);
       const message = error instanceof Error ? error.message : String(error);
       if (/Missing|Config error/i.test(message)) {
-        exitWithError(`Error: Config ${message}`, 64);
+        exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
       }
-      exitWithError(`Error: ${message}`, 1);
+      if (/^Failed to (upsert|list|fetch|get)/i.test(message)) {
+        exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+      }
+      exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }
   },
 });
+

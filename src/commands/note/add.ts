@@ -2,7 +2,9 @@ import { defineCommand } from 'citty';
 import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
-import { executeUpsertNote } from '../../tools/upsertNote.ts';
+import { EXIT, exitWithError } from '../../lib/exit.ts';
+import { fetchRecordById } from '../../services/base.ts';
+import { upsertNoteRecord } from '../../tools/upsertNote.ts';
 
 function buildNoteData(args: Record<string, string | boolean | undefined>) {
   const noteData: Record<string, unknown> = {
@@ -67,11 +69,6 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   return noteData;
 }
 
-function exitWithError(message: string, code: number) {
-  console.error(message);
-  process.exit(code);
-}
-
 export default defineCommand({
   meta: {
     name: 'add',
@@ -122,27 +119,16 @@ export default defineCommand({
     try {
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
-      const result = await executeUpsertNote(supabase, config, { note: noteData });
-      const text = result.content[0]?.text ?? '';
 
-      if (/64 KB/i.test(text)) {
-        await logger.error(text);
-        exitWithError(text, 1);
+      // beanId 是软引用：写之前确认豆子真的存在，否则备注会挂在一颗不存在的豆子上。
+      const beanId = typeof noteData.beanId === 'string' ? noteData.beanId : '';
+      const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
+      if (!bean) {
+        exitWithError(`Error: bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`, EXIT.USAGE);
       }
 
-      if (/^Failed to upsert note:/i.test(text)) {
-        await logger.error(text);
-        exitWithError(`Error: ${text}`, 65);
-      }
+      const { id, timestamp } = await upsertNoteRecord(supabase, config, noteData);
 
-      const match = text.match(/brewing note (note_[^\s]+) at ([^\.\n]+)/i);
-      if (!match) {
-        console.log(text);
-        await logger.success();
-        return;
-      }
-
-      const [, id, timestamp] = match;
       if (jsonFormat) {
         console.log(JSON.stringify({ id, status: 'created', timestamp }));
         await logger.success();
@@ -155,9 +141,13 @@ export default defineCommand({
       await logger.error(error);
       const message = error instanceof Error ? error.message : String(error);
       if (/Missing|Config error/i.test(message)) {
-        exitWithError(`Error: Config ${message}`, 64);
+        exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
       }
-      exitWithError(`Error: ${message}`, 1);
+      if (/^Failed to (upsert|list|fetch|get)/i.test(message)) {
+        exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+      }
+      exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }
   },
 });
+

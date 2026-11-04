@@ -12,6 +12,24 @@ function createPrompter() {
   const pendingResolvers: Array<{ resolve: (line: string) => void; reject: (error: Error) => void }> = [];
   let closed = false;
 
+  // 默认 readline 会把输入原样回显；输入密钥时需要逐字符打码。
+  // 这是 readline 内部钩子，没有公开 API，所以类型上放宽处理。
+  const writable = readline as unknown as { _writeToOutput?: (chunk: string) => void };
+  const defaultWrite = writable._writeToOutput?.bind(readline);
+  let masked = false;
+  writable._writeToOutput = (chunk: string) => {
+    if (!masked) {
+      if (defaultWrite) defaultWrite(chunk);
+      else output.write(chunk);
+      return;
+    }
+    if (/^[\r\n]+$/.test(chunk)) {
+      output.write(chunk);
+      return;
+    }
+    output.write('*'.repeat(chunk.length));
+  };
+
   readline.on('line', (line) => {
     const nextResolver = pendingResolvers.shift();
     if (nextResolver) {
@@ -45,8 +63,22 @@ function createPrompter() {
     });
   }
 
+  /** 输入不回显（打 *），用于密钥。非 TTY 环境回退成普通 ask。 */
+  async function askHidden(prompt: string) {
+    if (!input.isTTY || !output.isTTY) {
+      return ask(prompt);
+    }
+    masked = true;
+    try {
+      return await ask(prompt);
+    } finally {
+      masked = false;
+    }
+  }
+
   return {
     ask,
+    askHidden,
     close() {
       readline.close();
     },
@@ -78,7 +110,7 @@ async function promptForConfig() {
       }
     }
 
-    const supabaseServiceRoleKey = String(await prompter.ask('Service Role Key: ')).trim();
+    const supabaseServiceRoleKey = String(await prompter.askHidden('Service Role Key (input hidden): ')).trim();
     const userInput = String(await prompter.ask('User ID (default_user): ')).trim();
     const brewGuideUserId = userInput || 'default_user';
 
@@ -96,7 +128,10 @@ async function promptForConfig() {
       ),
       { mode: 0o600 },
     );
-    await fs.chmod(configPath, 0o600);
+    // Windows 没有 POSIX 权限位，chmod 是空操作；只在类 Unix 上收紧权限。
+    if (process.platform !== 'win32') {
+      await fs.chmod(configPath, 0o600);
+    }
 
     console.log(`配置已保存至 ${configPath}`);
   } catch (error) {

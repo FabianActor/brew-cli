@@ -3,6 +3,7 @@
  * 对应 agent-harness 的 core/beans.py。
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { parseGrams } from '../lib/weights.ts';
 import {
   fetchActiveRecords,
   fetchRecordById,
@@ -16,12 +17,6 @@ export interface BeanFilters {
   roastLevel?: string;
   beanType?: string;
   hasRemaining?: boolean;
-}
-
-function parseGrams(value: unknown): number {
-  if (typeof value !== 'string') return 0;
-  const match = value.match(/^([\d.]+)/);
-  return match ? Number.parseFloat(match[1]) : 0;
 }
 
 /**

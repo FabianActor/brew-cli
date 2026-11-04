@@ -63,6 +63,10 @@ export async function getEquipment(
 
 /**
  * 添加自定义器具。
+ *
+ * ID 是稳定 slug（例如 "V60"），所以“新增”很容易撞上已有记录。
+ * 默认拒绝覆盖，避免一次 add 把原器具的 note / hasValve 悄悄换掉；
+ * 确实要覆盖时显式传 `{ force: true }`（CLI 的 `--force`）。
  */
 export async function addEquipment(
   supabase: SupabaseClient,
@@ -72,15 +76,24 @@ export async function addEquipment(
   note: string,
   userId: string,
   id?: string,
+  options?: { force?: boolean },
 ): Promise<Record<string, unknown>> {
   const eqId = deriveEquipmentId(id, name);
+
+  const existing = await fetchRecordById(supabase, TABLE, eqId, userId);
+  if (existing && !options?.force) {
+    const existingName = typeof existing.data.name === 'string' ? existing.data.name : eqId;
+    throw new Error(`器具 "${eqId}" 已存在（${existingName}）。换一个 --id，或加 --force 覆盖。`);
+  }
+
   const data: Record<string, unknown> = {
     name,
     isCustom: true,
     animationType,
     hasValve,
     note,
-    timestamp: new Date().toISOString(),
+    // 主应用里所有 data.timestamp 都是毫秒数（customEquipmentStore.ts:112），不要写成 ISO 字符串。
+    timestamp: Date.now(),
   };
 
   await upsertRecord(supabase, TABLE, eqId, data, userId);

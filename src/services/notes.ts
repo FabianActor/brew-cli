@@ -87,7 +87,8 @@ export async function updateNote(
     ...row.data,
     ...updates,
     id: noteId,
-    updatedAt: new Date().toISOString(),
+    // 主应用里 note.updatedAt 是毫秒数（BrewingNoteFormModal.tsx:217），不能写 ISO 字符串。
+    updatedAt: Date.now(),
   };
   if (mergedTaste !== undefined) merged.taste = mergedTaste;
   if (mergedParams !== undefined) merged.params = mergedParams;

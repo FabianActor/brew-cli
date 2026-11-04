@@ -4,16 +4,8 @@ import type { BrewGuideConfig } from '../config.ts';
 import { generateId } from '../lib/ids.ts';
 import { now } from '../lib/timestamps.ts';
 import { getErrorMessage, invalidParamsResult, isRecord, textResult } from '../lib/toolResults.ts';
+import { normalizeWeight } from '../lib/weights.ts';
 import type { CoffeeBean } from '../types/coffeeBean.ts';
-
-function normalizeWeight(value: unknown) {
-  if (typeof value !== 'string') {
-    return value;
-  }
-
-  const normalized = value.replace(/\s+/g, '').replace(/(g|G|克)$/u, '');
-  return normalized || value;
-}
 
 /**
  * brew_guide_upsert_bean 工具的参数 schema。
@@ -67,18 +59,15 @@ export const upsertBeanParameters = Type.Object({
 });
 
 /**
- * 执行咖啡豆 upsert 操作。
+ * 写入一颗咖啡豆（结构化入口）。
+ *
+ * CLI 与 MCP 工具共用：返回真实 id / timestamp，调用方不必再从工具文案里抠 ID。
  */
-export async function executeUpsertBean(
+export async function upsertBeanRecord(
   supabase: SupabaseClient,
   config: BrewGuideConfig,
-  params: { bean: Partial<CoffeeBean> & Record<string, unknown> } | undefined,
-) {
-  if (!isRecord(params) || !isRecord(params.bean)) {
-    return invalidParamsResult('brew_guide_upsert_bean', '{ bean: object }');
-  }
-
-  const bean = params.bean;
+  bean: Partial<CoffeeBean> & Record<string, unknown>,
+): Promise<{ id: string; timestamp: string }> {
   const id = (bean.id as string) || generateId('bean');
   const ts = now();
 
@@ -173,30 +162,47 @@ export async function executeUpsertBean(
 
   const dataJson = JSON.stringify(normalizedBean);
   if (dataJson.length > 64_000) {
-    return textResult('Bean data exceeds 64 KB limit. Reduce payload size before retrying.');
+    throw new Error('Bean data exceeds 64 KB limit. Reduce payload size before retrying.');
+  }
+
+  // deleted_at: null 确保 upsert 同时恢复已软删除的记录
+  const { error } = await supabase
+    .from('coffee_beans')
+    .upsert(
+      {
+        id,
+        user_id: config.brewGuideUserId,
+        data: normalizedBean,
+        updated_at: ts,
+        deleted_at: null,
+      },
+      { onConflict: 'id,user_id' },
+    );
+
+  if (error) {
+    throw new Error(`Failed to upsert bean: ${error.message}`);
+  }
+
+  return { id, timestamp: ts };
+}
+
+/**
+ * 执行咖啡豆 upsert 操作（MCP 工具入口）。
+ */
+export async function executeUpsertBean(
+  supabase: SupabaseClient,
+  config: BrewGuideConfig,
+  params: { bean: Partial<CoffeeBean> & Record<string, unknown> } | undefined,
+) {
+  if (!isRecord(params) || !isRecord(params.bean)) {
+    return invalidParamsResult('brew_guide_upsert_bean', '{ bean: object }');
   }
 
   try {
-    // deleted_at: null 确保 upsert 同时恢复已软删除的记录
-    const { error } = await supabase
-      .from('coffee_beans')
-      .upsert(
-        {
-          id,
-          user_id: config.brewGuideUserId,
-          data: normalizedBean,
-          updated_at: ts,
-          deleted_at: null,
-        },
-        { onConflict: 'id,user_id' },
-      );
-
-    if (error) {
-      return textResult(`Failed to upsert bean: ${error.message}`);
-    }
-
-    return textResult(`Upserted coffee bean ${id} at ${ts}.`);
+    const { id, timestamp } = await upsertBeanRecord(supabase, config, params.bean);
+    return textResult(`Upserted coffee bean ${id} at ${timestamp}.`);
   } catch (error) {
-    return textResult(`Failed to upsert bean: ${getErrorMessage(error)}`);
+    const message = getErrorMessage(error);
+    return textResult(/^Failed to upsert bean:/.test(message) ? message : `Failed to upsert bean: ${message}`);
   }
 }

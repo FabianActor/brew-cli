@@ -5,8 +5,8 @@
  * 特殊结构：custom_methods 表中一行 = 一个 equipment 的所有 methods，
  * 行的 id 就是 equipmentId，data.methods 是方案数组。
  */
-import crypto from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { generateMethodId } from '../lib/ids.ts';
 import { fetchActiveRecords, fetchRecordById, upsertRecord } from './base.ts';
 
 const TABLE = 'custom_methods';
@@ -69,7 +69,8 @@ export async function addMethod(
   params: { coffee?: string; water?: string; ratio?: string; grindSize?: string; temp?: string; stages?: unknown[] },
   userId: string,
 ): Promise<Record<string, unknown>> {
-  const methodId = crypto.randomUUID();
+  // 与主应用 generateMethodId 同格式：method-<ms>-<7 位短随机>（customMethodStore.ts:74-76）
+  const methodId = generateMethodId();
   const method: Record<string, unknown> = {
     id: methodId,
     name,
@@ -160,3 +161,4 @@ export async function deleteMethod(
 
   return false;
 }
+
