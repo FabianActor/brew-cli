@@ -119,12 +119,9 @@ export async function upsertBeanRecord(
   if (!normalizedBean.beanType) {
     normalizedBean.beanType = 'filter';
   }
-  if (!normalizedBean.roastLevel && normalizedBean.beanType === 'filter') {
-    normalizedBean.roastLevel = '浅度烘焙';
-  }
-  if (!normalizedBean.roastLevel && normalizedBean.beanType === 'espresso') {
-    normalizedBean.roastLevel = '中深烘焙';
-  }
+  // 这里只补「App 自己也会补的形状默认值」，不替用户猜内容：
+  // 烘焙度、赏味期以前在这里被兜底成「浅度烘焙 / 30 / 60」，命令层刚修掉，
+  // 又被这一层悄悄写回去（实测：生豆被写成 startDay=30，在途豆被写成已到手）。
   if (!normalizedBean.beanState) {
     normalizedBean.beanState = 'roasted';
   }
@@ -145,16 +142,9 @@ export async function upsertBeanRecord(
       normalizedBean.endDay = parsed;
     }
   }
-  if (typeof normalizedBean.startDay !== 'number') {
-    normalizedBean.startDay = 30;
-  }
-  if (typeof normalizedBean.endDay !== 'number') {
-    normalizedBean.endDay = 60;
-  }
-  if (typeof normalizedBean.roastDate === 'string' && normalizedBean.roastDate.trim()) {
+  // 在途只按调用方给的值写；没给就按 App 的默认（已到手）落 false。
+  if (typeof normalizedBean.isInTransit !== 'boolean') {
     normalizedBean.isInTransit = false;
-  } else if (typeof normalizedBean.isInTransit !== 'boolean') {
-    normalizedBean.isInTransit = true;
   }
   if (normalizedBean.remaining == null && typeof normalizedBean.capacity === 'string' && normalizedBean.capacity) {
     normalizedBean.remaining = normalizedBean.capacity;
