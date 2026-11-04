@@ -1,9 +1,12 @@
 {
   "name": "brew-guide-cli",
-  "version": "0.1.10",
+  "version": "0.2.0",
   "type": "module",
   "description": "Standalone Citty CLI for operating brew-guide data in Supabase.",
-  "author": "Stanley",
+  "author": {
+    "name": "FabianActor",
+    "url": "https://github.com/FabianActor"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
