@@ -248,6 +248,18 @@ For beans, notes, and equipment, delete means:
 
 This repo does **not** physically delete those records.
 
+### Value conventions inside `data`
+
+The main app (`brew-guide`) reads these values directly, so the CLI has to match its formats, not invent new ones:
+
+- time values inside `data` are **numbers (ms epoch)**, never ISO strings:
+  - `coffee_beans.data.timestamp`
+  - `brewing_notes.data.timestamp`, `brewing_notes.data.updatedAt` (`BrewingNoteFormModal.tsx` writes `Date.now()`)
+  - `custom_equipments.data.timestamp`, `custom_methods.data.methods[].timestamp`
+- `data.id` mirrors the row's `id` column on every write.
+- method ids look like `method-<ms>-<7 位短随机>` (`customMethodStore.ts:74-76`).
+- bean origins live in `data.blendComponents[]` (`origin/country/region/estate/processingStation/altitude/process/variety/batch/percentage`); flat origin fields on `data` are legacy and are removed on write.
+
 ## RPC required by this repo
 
 The command `brew-guide roasters` depends on a Postgres function:

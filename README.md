@@ -45,7 +45,7 @@ npm install -g brew-guide-cli
 ## 直接 Agent 对话配置
 
 ```txt
-帮我通过以下命令安装`brew-guide-cli`: `npm install -g brew-guide-cli` ，然后通过以下命令安装相关 skills `npx skills add github.com/swiftwind0405/brew-guide-cli -y -g` 。安装完成后，根据`https://github.com/swiftwind0405/brew-guide-cli/blob/master/README.md`进行openclaw里面的所有配置。
+帮我通过以下命令安装`brew-guide-cli`: `npm install -g brew-guide-cli` ，然后通过以下命令安装相关 skills `npx skills add github.com/FabianActor/brew-guide-cli -y -g` 。安装完成后，根据`https://github.com/FabianActor/brew-guide-cli/blob/master/README.md`进行openclaw里面的所有配置。
 ```
 
 
@@ -58,8 +58,8 @@ brew-guide init
 ```
 
 执行后会交互式提示输入以下信息：
-1. **Supabase URL**: 你的 Supabase 项目 URL (例如: `https://your-project.supabase.co`)
-2. **Service Role Key**: 你的 Supabase service role 密钥 (由于绕过 RLS 且拥有完整权限，请勿泄露)
+1. **Supabase URL**: 你的 Supabase 项目 URL (例如: `https://your-project.supabase.co`)，结尾的 `/` 会自动去掉
+2. **Service Role Key**: 你的 Supabase service role 密钥（输入时不回显）。若你的表已经对 `anon` 角色放开读写（`brew-guide` 自带的 schema 就是 `USING (true)` 宽 RLS），填 publishable / anon key 同样能用，此时权限边界完全由 RLS 决定
 3. **User ID**: 同步记录到 brew-guide 时的用户标识 (默认值为 `default_user`)
 
 > 默认情况下，配置会保存在 `~/.config/brew-guide/config.json`。你也可以通过环境变量 `BREW_GUIDE_CONFIG_PATH` 来自定义配置文件路径。
@@ -77,11 +77,21 @@ brew-guide bean --help
 # 1. 列表查询咖啡豆
 brew-guide bean list --limit 10
 
-# 2. 添加咖啡豆 (包含必填项)
+# 2. 添加咖啡豆（至少一个成分要带 origin 和 process）
 brew-guide bean add --name "Yirgacheffe" --roaster "Tim Wendelboe" --origin "Ethiopia" --process "Washed"
+
+# 2b. 结构化成分字段（产区 / 庄园 / 处理站 / 海拔 / 批次）
+brew-guide bean add --name "罕贝拉 日晒" --roaster "MAME" \
+  --country "埃塞俄比亚" --region "古吉 罕贝拉" --estate "Buku Sayisa" \
+  --process "日晒" --variety "原生种" --altitude "2350-2460m"
+
+# 2c. 拼配：--component 可重复
+brew-guide bean add --name "三重奏" --roaster "TRIOON" \
+  --component "region=卡哈马卡;process=水洗" --component "region=库斯科;process=日晒;percentage=40"
 ```
 
-> **可选参数说明**：除了上述四个必填参之外，还可以提供 `--variety`, `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--flavor`, `--notes` 完善咖啡豆信息。
+> **可选参数说明**：除成分字段外，还可提供 `--roast-level`, `--roast-date`, `--price`, `--capacity`, `--bean-type`, `--notes` 完善咖啡豆信息。
+> 成分字段（`--origin/--country/--region/--estate/--processing-station/--process/--variety/--altitude/--batch/--percentage`）作用于第一个成分；`update` 时可用 `--component-index N` 指定第几个成分（从 1 开始），或 `--component` 整组替换。
 
 ### 管理冲煮记录 (`note`)
 
@@ -96,7 +106,9 @@ brew-guide note list --limit 10
 brew-guide note add --bean-id "YOUR_BEAN_ID" --method "V60" 
 ```
 
-> **可选参数说明**：可以提供 `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 完善冲煮过程记录。
+> **可选参数说明**：`--notes`, `--rating`, `--total-time`, `--source`, `--equipment`, `--taste-body/--taste-acidity/--taste-sweetness/--taste-bitterness` 为当前真实字段；
+> `--grind-size`, `--water-temp`, `--ratio`, `--brew-time`, `--flavor`, `--score`, `--memo`, `--brewed-at` 是兼容旧脚本的别名，会被归一到真实字段。
+> `--bean-id` 会在写入前校验豆子是否存在。
 
 ### 查看烘焙商 (`roasters`)
 
@@ -123,6 +135,18 @@ brew-guide roasters
 - 写入数据时自动维护 `created_at`（首次插入）和 `updated_at`（每次变更）。
 - 业务数据包裹并存放在对应表的 `data` JSONB 字段下。
 - 支持 UPSERT 功能（通过 `onConflict 'id,user_id'` 限制条件），不提供直接的彻底物理删除。
+- **写入会复活软删记录**：所有写入都带 `deleted_at: null`，对一条已软删的 `id` 执行 `add`/`update` 会让它重新出现在应用里。
+- 软删只是把 `deleted_at` 填上，行本身仍在，`list` 类命令默认只读 `deleted_at is null` 的行。
+
+## 退出码
+
+| 码 | 含义 |
+| --- | --- |
+| 0 | 成功 |
+| 1 | 运行时失败（记录不存在、写入被拒等） |
+| 2 | 参数用法错误（缺必填、取值非法、空字符串） |
+| 64 | 配置缺失或非法（先跑 `brew-guide init`） |
+| 65 | 网络 / Supabase 请求失败 |
 
 ## 开发测试
 

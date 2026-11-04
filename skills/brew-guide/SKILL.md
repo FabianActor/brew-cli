@@ -55,7 +55,7 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]` |
+| `note add` | 新增（见 `references/note-add.md`） | `brew-guide note add --bean-id "..." --method "..." [--equipment "V60"] [--rating 4] [--notes "..."] [--source tag] [--total-time 150] [--taste-body 4 --taste-acidity 4 --taste-sweetness 3 --taste-bitterness 2] [legacy flat flags] [--dry-run]`（`--bean-id` 必须指向存在的活豆，否则直接报错） |
 | `note list` | 列出 | `brew-guide note list [--limit N] [--equipment V60] [--method 日式] [--bean-id "..."] [--min-rating 3.5] [--format json]` |
 | `note get` | 详情 | `brew-guide note get <id> [--format json]` |
 | `note update` | 更新 | `brew-guide note update <id> --rating 4 --notes "..." [--equipment "V60"] [--total-time 150] [--source tag] [--ratio "1:15"] [--grind-size "..."] [--water-temp 92] [--coffee "15g"] [--water "225g"] [--taste-body 4] [--dry-run]`（`--rating` / `--taste-*` 0–5；taste / params 部分更新与现有值合并）|
@@ -65,13 +65,15 @@ brew-guide init
 
 | 子命令 | 用途 | 示例 |
 |---|---|---|
-| `equipment add` | 新增 | `brew-guide equipment add --name "V60" [--id "V60"] [--animation-type v60] [--has-valve] [--note "..."] [--dry-run]` |
+| `equipment add` | 新增 | `brew-guide equipment add --name "V60" [--id "V60"] [--animation-type v60] [--has-valve] [--note "..."] [--force] [--dry-run]` |
 | `equipment list` | 列出 | `brew-guide equipment list [--format json]` |
 | `equipment get` | 详情 | `brew-guide equipment get <id> [--format json]` |
 | `equipment update` | 更新 | `brew-guide equipment update <id> --name "..." --note "..." [--animation-type v60] [--has-valve true] [--dry-run]` |
 | `equipment delete` | 软删除 | `brew-guide equipment delete <id> [--dry-run]` |
 
 `--animation-type` 可选：`v60 / kalita / origami / clever / custom / espresso`，默认 `custom`。
+
+`--id` 撞上已有器具时会报错并停下（不会静默覆盖）；确认要替换原器具才加 `--force`。
 
 ### method — 冲煮方案
 
@@ -93,6 +95,8 @@ brew-guide roasters [--format json]
 
 - `--dry-run`：预览即将执行的操作，不实际写入
 - `--format json`：以 JSON 格式输出
+
+退出码：`0` 成功 / `1` 运行时失败 / `2` 参数用法错误 / `64` 缺少或错误的配置 / `65` 网络请求失败。看到 `2` 先改参数，别重试。
 
 优先用 `--dry-run` 展示，用户确认后再正式执行。
 
