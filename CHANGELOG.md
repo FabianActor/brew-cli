@@ -21,6 +21,7 @@
 - **`equipment list` / `method list` 的 ID 被截成前 8 位**：以前 `equipment list` 打出 `custom-o`、`method list` 打出 `method-1`（八条一模一样），复制出来根本没法当 `--equipment-id` 用。现在一律打完整 ID —— 列表存在的意义就是能拿去喂给下一条命令。
 - **人类视图的列会错位**：以前空字段被直接从行里删掉，一列缺失后面整体左移（`note list` 里会把 `beanId` 读成冲煮手法、把评分读成备注）。现在空值占位成 `-`，列数固定。
 - **`bean list` / `note list` 命中默认 `--limit 20` 时没有任何提示**：以前 `--country 埃塞俄比亚` 只出 20 条，看起来像总共就 20 条（实际 33 条）。现在命中上限会在 stderr 提示「只显示前 N 条，可能还有更多」——`--format json` 也提示（走 stderr，不污染 stdout 的 JSON）。
+- **Windows 上 `--format json` 被管道/重定向时，中文会破坏 JSON 结构**：控制台用 936(GBK) 解码 CLI 的 UTF-8 输出，多字节字符错位会吃掉后面的引号，于是 `brew-guide bean list --format json | ConvertFrom-Json` 报 `After parsing a value an unexpected character was encountered: r. Path '[0].origin'`。现在 Windows 上输出不是交互终端时，JSON 里的非 ASCII 字符自动转成 `\uXXXX`，任何代码页都能解析；交互终端仍是原样中文。`BREW_GUIDE_JSON_ASCII=0/1` 可强制关闭/开启。
 
 ### 变更
 

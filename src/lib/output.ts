@@ -8,9 +8,43 @@
  * 不会被夹在中间的提示行破坏。
  */
 
+/**
+ * 把 JSON 文本里的非 ASCII 字符换成 `\uXXXX`。
+ *
+ * 只作用于已经序列化好的 JSON 文本，所以不会破坏结构：非 ASCII 字符只会出现在
+ * 字符串字面量里（键和值），换成转义序列后仍是同一个字符串，任何解析器都能读回原文。
+ */
+export function toAsciiJson(text: string): string {
+  return text.replace(/[\u007f-\uffff]/g, (char) => {
+    return `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`;
+  });
+}
+
+/**
+ * Windows 上什么时候该转义：输出被管道/重定向（非 TTY）时。
+ *
+ * 原因：控制台默认代码页是 936(GBK)，PowerShell 用当前代码页解码子进程的 UTF-8 输出，
+ * 中文这类多字节字符会错位并把后面的引号吃掉 —— 现象是
+ * `After parsing a value an unexpected character was encountered: r. Path '[0].origin'`。
+ * 转成 ASCII 后不管调用方用什么代码页，JSON 都能解析。
+ *
+ * 交互式终端不转义（人要看得懂中文）；`BREW_GUIDE_JSON_ASCII=0/1` 可强制关闭/开启。
+ */
+export function shouldEscapeJson(
+  platform: string = process.platform,
+  isTTY: boolean = Boolean(process.stdout.isTTY),
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const override = env.BREW_GUIDE_JSON_ASCII;
+  if (override === '1' || override === 'true') return true;
+  if (override === '0' || override === 'false') return false;
+  return platform === 'win32' && !isTTY;
+}
+
 /** `--format json` 的唯一出口：紧凑单行，方便管道。 */
 export function printJson(value: unknown): void {
-  console.log(JSON.stringify(value));
+  const text = JSON.stringify(value);
+  console.log(shouldEscapeJson() ? toAsciiJson(text) : text);
 }
 
 /** 提示/警告：不污染 stdout。 */

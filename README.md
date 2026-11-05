@@ -246,12 +246,16 @@ brew-guide update-check --format json   # {"current","latest","upgradable","sour
 ## 常见问题
 
 **中文 Windows 上 `brew-guide ... --format json | ConvertFrom-Json` 报 JSON 解析错误。**
-不是 JSON 坏了，是控制台用 GBK 解码了 UTF-8 输出，中文把引号吃掉了。两种解法任选：
+0.3.2 起不会了：Windows 上输出被管道/重定向（不是交互终端）时，JSON 里的非 ASCII 字符会自动转成 `\uXXXX`，不管控制台是哪个代码页都能解析 —— 你看到的是转义码，`ConvertFrom-Json` / `jq` 读出来仍是中文。交互终端里还是原样中文。
+
+老版本（0.3.1 及以前）或在别的程序里遇到同样报错，是控制台用 GBK 解码了 UTF-8 输出，中文把引号吃掉了；两种解法任选：
 
 ```powershell
 chcp 65001                                  # 只影响当前窗口
 [Console]::OutputEncoding = [Text.Encoding]::UTF8   # 当前会话生效
 ```
+
+想强制关掉转义：`BREW_GUIDE_JSON_ASCII=0`（强制打开用 `1`）。
 
 在意的是「CLI 的输出是 UTF-8」这件事 —— 写文件再用 `Get-Content -Encoding utf8` 读也一样可靠。
 

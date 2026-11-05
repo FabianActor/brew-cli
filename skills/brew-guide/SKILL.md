@@ -111,7 +111,7 @@ brew-guide update-check [--format json]
 ### 通用 flags
 
 - `--dry-run`：预览即将执行的操作，不实际写入
-- `--format json`：以 JSON 格式输出（stdout 单行紧凑；警告与错误走 stderr，可直接管道给 `jq`）
+- `--format json`：以 JSON 格式输出（stdout 单行紧凑；警告与错误走 stderr，可直接管道给 `jq`）。Windows 上输出被管道/重定向时，非 ASCII 字符会转成 `\uXXXX`（避免 GBK 控制台解码后破坏 JSON 结构），解析回来仍是原文，不用特殊处理。
 
 退出码：`0` 成功 / `1` 运行时失败 / `2` 参数用法错误 / `64` 缺少或错误的配置 / `65` 网络请求失败。看到 `2` 先改参数，别重试。
 
