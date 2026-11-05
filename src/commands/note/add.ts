@@ -143,7 +143,7 @@ export default defineCommand({
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
 
-      // beanId 是软引用：写之前确认豆子真的存在，否则备注会挂在一颗不存在的豆子上。
+      // beanId 是软引用：写之前确认豆子真的存在，否则备注会挂在一款不存在的豆子上。
       const beanId = typeof noteData.beanId === 'string' ? noteData.beanId : '';
       const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
       if (!bean) {

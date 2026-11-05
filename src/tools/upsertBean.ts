@@ -59,7 +59,7 @@ export const upsertBeanParameters = Type.Object({
 });
 
 /**
- * 写入一颗咖啡豆（结构化入口）。
+ * 写入一款咖啡豆（结构化入口）。
  *
  * CLI 与 MCP 工具共用：返回真实 id / timestamp，调用方不必再从工具文案里抠 ID。
  */

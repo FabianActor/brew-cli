@@ -128,7 +128,7 @@ export default defineCommand({
         updates.startDay = 0;
         updates.endDay = 0;
       } else if (!(typeof args['roast-date'] === 'string' && args['roast-date'])) {
-        warn('Warning: 转成熟豆但没给 --roast-date，App 里这颗豆的赏味期会显示「未设置烘焙日期」。');
+        warn('Warning: 转成熟豆但没给 --roast-date，App 里这款豆的赏味期会显示「未设置烘焙日期」。');
       }
     } else if (purchaseDateArg !== undefined) {
       updates.purchaseDate = parseDateOnly(purchaseDateArg, '--purchase-date');

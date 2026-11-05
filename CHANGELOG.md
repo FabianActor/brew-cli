@@ -30,6 +30,7 @@
 ### 文档
 
 - README 新增「常见问题」：中文 Windows 上 `--format json | ConvertFrom-Json` 报 JSON 解析错误是控制台用 GBK 解码 UTF-8 输出所致（`chcp 65001` 或 `[Console]::OutputEncoding = [Text.Encoding]::UTF8`），不是 JSON 坏了。
+- 豆子的计数单位从「颗」统一改成「款」——一款豆对应一袋豆子，不是一粒。提示语、README 与 `skills/` 里的说法一起改了。
 
 ---
 
@@ -83,7 +84,7 @@
 
 - **新建豆默认被标成「在途」**：没有 `--roast-date` 时以前的实现会写 `isInTransit: true`，豆子卡片上就挂着在途标记。现在恒定写 `false`（与 App 缺省一致）。
 - **赏味期固定 30/60 天**：改为按烘焙度取 App 的同一套预设——浅烘 `7/60`、中烘 `10/60`、深烘 `14/90`；烘焙度为空时按中烘。
-- **按豆种猜烘焙度**：以前 `filter` 一律写「浅度烘焙」、`espresso` 写「中深烘焙」。现在不给就不填。猜错的值会让 `bean list --roast-level`（精确匹配）永远筛不到这颗豆。
+- **按豆种猜烘焙度**：以前 `filter` 一律写「浅度烘焙」、`espresso` 写「中深烘焙」。现在不给就不填。猜错的值会让 `bean list --roast-level`（精确匹配）永远筛不到这款豆。
 - **`--rating` 不校验范围**：`--rating 9` 以前直接入库，App 里显示 9/5。现在只收 0–5，超范围 exit 2 不写库。
 - **`--water-temp "92°C"` 写出 `NaN°C`**：以前直接 `Number()`。现在接受 `92`、`92°C`、`88 ℃`、`93.5C`，统一存成 `92°C`。
 - **`--stages-json` 只校验是不是数组**：现在逐段校验——`label` 必填，`detail` 缺失补空字符串，`name`→`label`、`time`→`duration` 自动兼容，`water` 数字转字符串，`duration` 必须是非负数，`valveStatus` 只能是 `open`/`closed`。

@@ -52,7 +52,7 @@ export function normalizeRoastLevel(input: string): NormalizedRoastLevel {
     value: mapped,
     warning:
       `Warning: --roast-level "${mapped}" 不是 App 的标准值（${ROAST_LEVELS.join(' / ')}）。` +
-      '已经照写，但 bean list --roast-level 是精确匹配，这颗豆可能筛不出来。',
+      '已经照写，但 bean list --roast-level 是精确匹配，这款豆可能筛不出来。',
   };
 }
 

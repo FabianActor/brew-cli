@@ -141,7 +141,7 @@ brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "�
   --bean-state green --purchase-date 2026-10-20
 ```
 
-生豆和熟豆是两套日期语义：生豆记**购买日期**，熟豆记**烘焙日期**，App 不会同时显示两个。所以 `--bean-state green` 和 `--roast-date` 是冲突的，同时给会直接报错；转回熟豆要给 `--roast-date`，否则 App 里那颗豆会显示「未设置烘焙日期」。
+生豆和熟豆是两套日期语义：生豆记**购买日期**，熟豆记**烘焙日期**，App 不会同时显示两个。所以 `--bean-state green` 和 `--roast-date` 是冲突的，同时给会直接报错；转回熟豆要给 `--roast-date`，否则 App 里那款豆会显示「未设置烘焙日期」。
 
 `--price` 只收数字（`88`、`88.5`，也认 `¥88`、`88元` 这种写法），存成字符串给 App 算「元/克」。
 

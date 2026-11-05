@@ -80,7 +80,7 @@ export default defineCommand({
     // 产区/处理法/品种/产国/批次躺在 data.blendComponents[] 里，PostgREST 的 data->>key 够不着，
     // 只能在本地逐条判断（包含匹配，因为库里存的是「古吉 罕贝拉」这种大区+细分）。
     // --country 额外认 origin：按现在的填写口径，国家是写在产地里的（产国字段多数人没开），
-    // 只认 country 会让「--country 埃塞俄比亚」在正常库里一颗都筛不出来。
+    // 只认 country 会让「--country 埃塞俄比亚」在正常库里一款都筛不出来。
     const COMPONENT_ALIASES: Record<string, readonly string[]> = {
       country: ['country', 'origin'],
     };

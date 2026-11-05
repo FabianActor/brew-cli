@@ -114,7 +114,7 @@ export async function updateBean(
   } else if (Object.keys(blendPatch).length > 0) {
     if (componentIndex >= existing.length) {
       throw new Error(
-        `成分 #${componentIndex + 1} 不存在：这颗豆子只有 ${existing.length} 个成分（编号从 1 开始）。`,
+        `成分 #${componentIndex + 1} 不存在：这款豆子只有 ${existing.length} 个成分（编号从 1 开始）。`,
       );
     }
     merged.blendComponents = existing.map((item, index) => {
