@@ -137,6 +137,9 @@ export default defineCommand({
         warn('Warning: scanned a lot of rows without filling --limit; result may be partial.');
       }
 
+      // 打在 JSON 之前：管道/重定向时 stdout 只有数据，这句走 stderr 不会污染解析。
+      warnMaybeMore(rows.length, limit);
+
       if (args.format === 'json') {
         printJson(rows);
         await logger.success();
@@ -150,7 +153,6 @@ export default defineCommand({
       }
 
       printHumanRecords(rows);
-      warnMaybeMore(rows.length, limit);
       await logger.success();
     } catch (error) {
       await logger.error(error);
