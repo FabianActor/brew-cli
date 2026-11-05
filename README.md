@@ -51,7 +51,7 @@ brew-guide init
 | --- | --- |
 | Supabase URL | 你的项目地址，结尾的 `/` 会自动去掉 |
 | API key | **publishable** key 就够（旧名 `anon`，在 Legacy API keys 标签里）；**不需要** service_role / secret key。输入时不回显，存在配置文件的 `supabaseKey` 字段 |
-| User ID | 同步用的用户标识，默认 `default_user` |
+| User ID | 同步用的用户标识。**直接回车就是 `default_user`** —— App 固定用这个值（`syncOperations.ts` 的 `DEFAULT_USER_ID`），填别的名字等于开了一份和 App 互不相通的数据 |
 
 为什么 publishable 就够：brew-guide 自带的 schema 对五张表都开了 `USING (true)` 宽 RLS，还对 `anon` 显式授了增删改查——权限边界**就是** RLS 本身，换个人拿到同一把 key 也是这个权限。**它不能绕过 RLS**：表上没有对应策略的库，这把 key 一样被拒。想收窄的话得改策略，不是换 key。
 

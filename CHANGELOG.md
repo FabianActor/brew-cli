@@ -16,7 +16,9 @@
 
 ## [未发布]
 
-暂无。下一版的改动会先写在这里。
+### 变更
+
+- **`init` 问 User ID 时直接回车就是 `default_user`，提示语写明了**：以前只写 `User ID (default_user):`，看起来像要你填点什么。现在提示是 `press Enter for default_user — must match the id the app syncs with`；如果你真的填了别的名字，配置保存后会额外警告一次——App 固定用 `default_user`，两边不一样就是两份互不相通的数据。
 
 ## [0.3.2] - 2026-11-05
 
