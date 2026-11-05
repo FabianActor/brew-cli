@@ -102,7 +102,7 @@ export default defineCommand({
       if (args.format === 'json') {
         console.log(JSON.stringify({ dryRun: true, action: 'update', id: args.id, updates }));
       } else {
-        console.log(`[dry-run] Would update note ${args.id.slice(0, 8)}:\n${JSON.stringify(updates, null, 2)}`);
+        console.log(`[dry-run] Would update note ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
       await logger.success();
       return;
@@ -121,7 +121,7 @@ export default defineCommand({
       if (args.format === 'json') {
         console.log(JSON.stringify(result, null, 2));
       } else {
-        console.log(`Updated note ${args.id.slice(0, 8)}`);
+        console.log(`Updated note ${args.id}`);
       }
 
       await logger.success();

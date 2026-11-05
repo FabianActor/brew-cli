@@ -5,6 +5,9 @@ on:
     branches:
       - master
   pull_request:
+  # 手动触发：当某条 run 卡在 runner 排队里（取消不掉、也重跑不了）时，
+  # 用 `gh workflow run CI` 直接开一条干净的，不用为此推空提交。
+  workflow_dispatch:
 
 jobs:
   verify:

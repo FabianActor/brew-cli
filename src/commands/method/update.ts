@@ -51,7 +51,7 @@ export default defineCommand({
       if (args.format === 'json') {
         printJson({ dryRun: true, action: 'update', id: args.id, updates });
       } else {
-        console.log(`[dry-run] Would update method ${args.id.slice(0, 8)}:\n${JSON.stringify(updates, null, 2)}`);
+        console.log(`[dry-run] Would update method ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
       await logger.success();
       return;

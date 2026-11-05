@@ -42,7 +42,7 @@ export default defineCommand({
       if (args.format === 'json') {
         printJson(preview);
       } else {
-        console.log(`[dry-run] Would consume ${amount}g from bean ${args.id.slice(0, 8)}${withNote ? ` and write ${source} note` : ''}`);
+        console.log(`[dry-run] Would consume ${amount}g from bean ${args.id}${withNote ? ` and write ${source} note` : ''}`);
       }
       await logger.success();
       return;

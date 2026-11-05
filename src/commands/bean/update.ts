@@ -184,7 +184,7 @@ export default defineCommand({
       if (args.format === 'json') {
         console.log(JSON.stringify({ dryRun: true, action: 'update', id: args.id, updates }));
       } else {
-        console.log(`[dry-run] Would update bean ${args.id.slice(0, 8)}:\n${JSON.stringify(updates, null, 2)}`);
+        console.log(`[dry-run] Would update bean ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
       await logger.success();
       return;
