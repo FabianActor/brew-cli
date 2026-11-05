@@ -107,6 +107,7 @@ brew-guide roasters --format json
 - `beanType` 没给时，默认按 `filter`
 - `roastLevel` **不给就留空**，不按豆种猜（App 里烘焙度空着是正常状态，猜错会污染筛选）
 - `startDay / endDay` 不给时读 App 的赏味期设置（`user_settings.data.appSettings`），优先级同 App（`flavorPeriodUtils.ts:100-140`）：**烘焙商配置 `roasterConfigs[].flavorPeriod` → 全局 `customFlavorPeriod` → 兜底预设**（浅 7/60、中 10/60、深 14/90，烘焙度为空按中烘），每档每个字段各自回落；要改就用 `--start-day` / `--end-day`（给了这两个就不再读设置）。读不到设置时回落预设，并在非 dry-run 下打一行 warning
+- **这组天数只有在有烘焙日期时才生效**：没给 `--roast-date` 的熟豆，App 判到 `roastDate` 为空会返回「未知 / 未设置烘焙日期」（`flavorPeriodUtils.ts:217`），养豆期、赏味期都不计算。要让它开始计天，`--roast-date` 一起给
 - `isInTransit` / `isFrozen` 默认都是 `false`（=已到手、没冷冻）
 - `beanState` 默认 `roasted`；`green`（生豆）要显式传
 - `price` 只收数字（最多两位小数），存字符串

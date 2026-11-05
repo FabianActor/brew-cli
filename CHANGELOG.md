@@ -32,6 +32,7 @@
 
 - README 新增「常见问题」：中文 Windows 上 `--format json | ConvertFrom-Json` 报 JSON 解析错误是控制台用 GBK 解码 UTF-8 输出所致（`chcp 65001` 或 `[Console]::OutputEncoding = [Text.Encoding]::UTF8`），不是 JSON 坏了。
 - 豆子的计数单位从「颗」统一改成「款」——一款豆对应一袋豆子，不是一粒。提示语、README 与 `skills/` 里的说法一起改了。
+- README 加豆段补充：`--start-day` / `--end-day` 这组天数只有在**有烘焙日期**时才生效，没给 `--roast-date` 的熟豆在 App 里显示「未设置烘焙日期」，养豆期/赏味期都不计算（`flavorPeriodUtils.ts:217`）。
 
 ---
 
