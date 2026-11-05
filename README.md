@@ -194,6 +194,17 @@ brew-guide backup --out "D:\bk\brew.json"
 
 导出 `coffee_beans` / `brewing_notes` / `custom_equipments` / `custom_methods` / `user_settings` 的原始行（含软删），可以直接当离线快照。**批量改库之前先跑一次。**
 
+### 更新检查
+
+```bash
+brew-guide update-check                 # 现在就去 npm 上查一次
+brew-guide update-check --format json   # {"current","latest","upgradable","source"}
+```
+
+平时不用管：每条命令结束前会看一眼本地缓存，发现 npm 上有更新的版本就在 stderr 提醒一次（24 小时最多查一次，同一个版本只提示一次）。提示永远不联网等结果，所以不会拖慢命令；离线、被墙、registry 抽风都只是静默不提示。
+
+不想被提醒就设 `BREW_GUIDE_NO_UPDATE_CHECK=1`（`update-check` 子命令本身不受影响，它只是不自动查）。
+
 ---
 
 ## 命令总览
@@ -208,6 +219,7 @@ brew-guide backup --out "D:\bk\brew.json"
 | `method add / get / update / delete / list` | 冲煮配方（`--stages-json` 传分段注水步骤） |
 | `roasters` | 库里出现过的烘焙商 |
 | `backup` | 整库导出成 JSON |
+| `update-check` | 查 npm 上有没有新版本 |
 | `init` | 写配置 |
 
 每个命令的完整参数用 `--help` 看，例如 `brew-guide bean add --help`。

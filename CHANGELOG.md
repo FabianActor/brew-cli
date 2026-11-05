@@ -14,6 +14,21 @@
 
 ---
 
+## [未发布]
+
+### 新增
+
+- **会提醒你用着旧版本了**：以前唯一的办法是自己想起来跑 `--version`，再跟 npm 页面比 —— 也就是说 0.2.2 之前那些会静默写坏数据的版本，用户根本不会知道自己该升级。现在每条命令结束前会看一眼本地缓存，npm 上有更新的版本就往 stderr 提醒一次（`npm install -g @fabianactor/brew-cli@latest`）。缓存 24 小时最多刷新一次，同一个版本只提示一次；**提示不联网等结果**，离线、超时、registry 报错都只是静默不提示，不影响命令本身。
+- **`brew-guide update-check`**：手动查一次，总是联网、绕过缓存。`--format json` 给 `{"current","latest","upgradable","source"}`，方便脚本里判断。
+- **`BREW_GUIDE_NO_UPDATE_CHECK=1`**：关掉自动检查（`update-check` 子命令本身照常工作）。
+
+### 说明
+
+- 缓存写在配置文件同目录的 `update-check.json`（默认 `~/.config/brew-guide/update-check.json`），可以随时删，删了下次重新查。
+- `--version`、`--help`、`update-check` 自己不触发自动检查 —— 查版本的那一行不该顺带查一次网。
+
+---
+
 ## [0.3.0] - 2026-11-05
 
 这一版补齐「App 里能做的、CLI 做不了」，并把几处会悄悄写坏数据、或跟 App 抢写的地方堵上。

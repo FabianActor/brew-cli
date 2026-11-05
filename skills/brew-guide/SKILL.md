@@ -100,6 +100,14 @@ brew-guide backup [--out "D:\backups\brew.json"] [--include-deleted false] [--fo
 
 导出 `coffee_beans` / `brewing_notes` / `custom_equipments` / `custom_methods` / `user_settings` 的原始行。默认带软删行，默认文件名 `brew-guide-backup-<timestamp>.json`。**改库前先跑一次**。
 
+### update-check — 查有没有新版本
+
+```bash
+brew-guide update-check [--format json]
+```
+
+输出 `{"current","latest","upgradable","source"}`。平时不用主动跑：每条命令会读本地缓存，发现 npm 上有新版本就在 stderr 提醒一次（24 小时最多刷一次缓存，同一版本只提醒一次，提示不等网络）。离线、超时、registry 异常都静默跳过。不想被提醒就设 `BREW_GUIDE_NO_UPDATE_CHECK=1`。
+
 ### 通用 flags
 
 - `--dry-run`：预览即将执行的操作，不实际写入

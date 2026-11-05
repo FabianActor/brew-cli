@@ -7,6 +7,8 @@ import initCommand from './commands/init.ts';
 import methodCommand from './commands/method/index.ts';
 import noteCommand from './commands/note/index.ts';
 import roastersCommand from './commands/roasters.ts';
+import updateCheckCommand from './commands/updateCheck.ts';
+import { maybeNotifyUpdate, startBackgroundUpdateCheck } from './lib/updateCheck.ts';
 
 const main = defineCommand({
   meta: {
@@ -22,7 +24,29 @@ const main = defineCommand({
     method: methodCommand,
     roasters: roastersCommand,
     backup: backupCommand,
+    'update-check': updateCheckCommand,
   },
 });
 
-runMain(main);
+// --version / --help / 直接敲命令名 / update-check 自己都不用提示更新。
+function shouldCheckForUpdates(argv: string[]): boolean {
+  if (argv.length === 0) {
+    return false;
+  }
+  if (argv[0] === 'update-check') {
+    return false;
+  }
+  return !argv.some((arg) => ['--version', '-v', '--help', '-h'].includes(arg));
+}
+
+async function bootstrap(): Promise<void> {
+  if (shouldCheckForUpdates(process.argv.slice(2))) {
+    // 后台刷新缓存（不阻塞）；提示只用缓存里的结果，不联网等待。
+    startBackgroundUpdateCheck(packageJson.version);
+    await maybeNotifyUpdate(packageJson.version);
+  }
+
+  await runMain(main);
+}
+
+await bootstrap();

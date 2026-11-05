@@ -1,9 +1,13 @@
 import { spawn, spawnSync } from 'node:child_process';
 
+// 测试里默认关掉更新检查：否则每条发起的命令都会去打 npm registry，
+// 让用例变慢、也依赖外网。要测更新检查本身的用例显式传 BREW_GUIDE_NO_UPDATE_CHECK: ''。
+const BASE_ENV = { BREW_GUIDE_NO_UPDATE_CHECK: '1' };
+
 export function spawnCli(args, options = {}) {
   const child = spawn(process.execPath, ['--import', 'tsx', 'src/main.ts', ...args], {
     cwd: options.cwd,
-    env: { ...process.env, ...(options.env ?? {}) },
+    env: { ...process.env, ...BASE_ENV, ...(options.env ?? {}) },
     stdio: 'pipe',
   });
 
@@ -44,7 +48,7 @@ export async function runInteractiveCli(args, options = {}) {
 export function runCliSync(args, options = {}) {
   return spawnSync(process.execPath, ['--import', 'tsx', 'src/main.ts', ...args], {
     cwd: options.cwd,
-    env: { ...process.env, ...(options.env ?? {}) },
+    env: { ...process.env, ...BASE_ENV, ...(options.env ?? {}) },
     encoding: 'utf8',
   });
 }
