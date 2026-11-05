@@ -128,6 +128,39 @@ test('checkForUpdate hits the registry and refreshes the cache', async () => {
   assert.equal(cache?.latest, '0.3.2');
 });
 
+test('checkForUpdate retries once before giving up', async () => {
+  const { cachePath } = await makeCachePath();
+  const calls = [];
+
+  const status = await checkForUpdate('0.3.0', {
+    cachePath,
+    fetchImpl: async () => {
+      calls.push(1);
+      // 第一次失败（超时/抖动），第二次成功——这正是实测里那条偶尔误报「网络不通」的路径。
+      return calls.length === 1 ? jsonResponse({}, false) : jsonResponse({ version: '0.3.2' });
+    },
+  });
+
+  assert.equal(calls.length, 2);
+  assert.equal(status?.latest, '0.3.2');
+});
+
+test('checkForUpdate gives up after two failed attempts', async () => {
+  const { cachePath } = await makeCachePath();
+  const calls = [];
+
+  const status = await checkForUpdate('0.3.0', {
+    cachePath,
+    fetchImpl: async () => {
+      calls.push(1);
+      throw new Error('ECONNRESET');
+    },
+  });
+
+  assert.equal(calls.length, 2);
+  assert.equal(status, null);
+});
+
 test('startBackgroundUpdateCheck refreshes a stale cache without blocking', async () => {
   const { cachePath } = await makeCachePath();
   await writeUpdateCache({ checkedAt: '2020-01-01T00:00:00.000Z', latest: '0.1.0' }, cachePath);

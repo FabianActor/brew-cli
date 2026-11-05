@@ -25,7 +25,7 @@ export default defineCommand({
       await logger.error('update check failed');
       exitWithError(
         [
-          'Error: 查不到 npm 上的最新版本（网络不通或 registry 异常）。',
+          'Error: 查不到 npm 上的最新版本（连了两次都没成功：网络不通或 registry 异常）。',
           `       手动确认：npm view ${PACKAGE_NAME} version`,
         ].join('\n'),
         EXIT.NETWORK,

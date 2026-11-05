@@ -21,6 +21,9 @@ export const PACKAGE_NAME = '@fabianactor/brew-cli';
 export const REGISTRY_LATEST_URL = `https://registry.npmjs.org/${encodeURIComponent(PACKAGE_NAME)}/latest`;
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const FETCH_TIMEOUT_MS = 1500;
+/** 手动 `update-check` 用的超时：用户明确在等结果，宁可多等一会儿也别误报「网络不通」。 */
+export const MANUAL_TIMEOUT_MS = 10_000;
+export const MANUAL_ATTEMPTS = 2;
 export const DISABLE_ENV = 'BREW_GUIDE_NO_UPDATE_CHECK';
 
 export interface UpdateCache {
@@ -239,12 +242,24 @@ export function startBackgroundUpdateCheck(currentVersion: string, options: Fetc
   })();
 }
 
-/** 手动查询：总是联网，并顺手更新缓存。查不到返回 null。 */
+/**
+ * 手动查询：总是联网，并顺手更新缓存。查不到返回 null。
+ *
+ * 和后台检查用两套超时：后台是 1.5 秒（最好别让进程多活太久），这里是 10 秒
+ * 且重试一次。实测这个 registry 接口偶尔要 1.5 秒以上才回应，用后台那套超时
+ * 会把「网络慢」误报成「网络不通」。
+ */
 export async function checkForUpdate(
   currentVersion: string,
   options: FetchOptions & CachePathOption = {},
 ): Promise<UpdateStatus | null> {
-  const latest = await fetchLatestVersion(options);
+  const attempts = options.timeoutMs === undefined ? MANUAL_ATTEMPTS : 1;
+  const timeoutMs = options.timeoutMs ?? MANUAL_TIMEOUT_MS;
+
+  let latest: string | null = null;
+  for (let attempt = 0; attempt < attempts && !latest; attempt += 1) {
+    latest = await fetchLatestVersion({ ...options, timeoutMs });
+  }
   if (!latest) {
     return null;
   }
