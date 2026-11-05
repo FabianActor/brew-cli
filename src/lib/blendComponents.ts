@@ -144,13 +144,8 @@ export function buildBlendComponents(
   return components;
 }
 
-/** 校验成分数组是否够格写库（至少一个成分带 origin 和 process）。 */
-export function assertComponentsUsable(components: BlendComponent[]): void {
-  if (components.length === 0) {
-    fail('缺少成分信息：用 --origin / --process，或 --component "origin=...;process=..." 指定');
-  }
-  const hasOrigin = components.some((item) => typeof item.origin === 'string' && item.origin);
-  const hasProcess = components.some((item) => typeof item.process === 'string' && item.process);
-  if (!hasOrigin) fail('缺少产地：用 --origin 或 --component 里的 origin=... 指定');
-  if (!hasProcess) fail('缺少处理法：用 --process 或 --component 里的 process=... 指定');
-}
+/**
+ * 成分是**可选**的：App 的表单里只有「咖啡豆名称」是必填，产地、处理法、烘焙商都能空着存
+ * （`brew-guide/src/components/coffee-bean/Form/components/BasicInfo.tsx:481-521` 只有名称带 `*`）。
+ * 所以这里不做「必须带 origin/process」的校验，命令行也只要求 --name。
+ */

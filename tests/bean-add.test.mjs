@@ -68,13 +68,20 @@ test('brew-guide bean add --dry-run --format json returns a structured preview',
   assert.deepEqual(payload.bean.blendComponents, [{ origin: 'O', process: 'P' }]);
 });
 
-test('brew-guide bean add fails when no component carries an origin', () => {
-  const result = runCliSync(['bean', 'add', '--name', 'Ethiopia', '--roaster', 'R'], {
+test('brew-guide bean add only requires a name, like the app form', () => {
+  // App 的表单里只有「咖啡豆名称」带必填星号（BasicInfo.tsx:481-521），
+  // 产地、处理法、烘焙商都可以空着存，CLI 不能比 App 严。
+  const result = runCliSync(['bean', 'add', '--name', '只有名字', '--dry-run', '--format', 'json'], {
     env: getOfflineEnv(),
   });
 
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stderr}${result.stdout}`, /缺少(产地|成分信息)/);
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.bean.name, '只有名字');
+  assert.equal(payload.bean.roaster, undefined);
+  assert.equal(payload.bean.blendComponents, undefined);
+  assert.equal(payload.bean.beanState, 'roasted');
+  assert.equal(payload.bean.isInTransit, false);
 });
 
 test('brew-guide bean add builds multiple components from repeated --component', () => {

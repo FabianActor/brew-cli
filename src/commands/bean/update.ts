@@ -3,11 +3,7 @@ import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
-import {
-  assertComponentsUsable,
-  buildBlendComponents,
-  componentFromFlags,
-} from '../../lib/blendComponents.ts';
+import { buildBlendComponents, componentFromFlags } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { warn } from '../../lib/output.ts';
 import {
@@ -142,7 +138,6 @@ export default defineCommand({
 
     if (componentSpecs.length > 0) {
       const components = buildBlendComponents(componentSpecs, {});
-      assertComponentsUsable(components);
       updates.blendComponents = components;
     } else if (Object.keys(componentFlags).length > 0) {
       Object.assign(updates, componentFlags);

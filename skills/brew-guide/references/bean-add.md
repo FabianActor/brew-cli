@@ -8,12 +8,13 @@
 ## 1. 字段清单
 
 **必填**
-- `name`
-- `roaster`
-- 成分至少一个带 `origin`
-- 成分至少一个带 `process`
+- `name`（**只有它**，与 App 的表单一致：`BasicInfo.tsx:481-521` 里只有「咖啡豆名称」带必填星号）
+- 产地、处理法、烘焙商都能空着存 —— 别替调用方补，也别拒绝
 
 **推荐填写**
+- `roaster`（烘焙商，App 里可空，但列表和筛选都靠它）
+- `origin`（产地）
+- `process`（处理法）
 - `region`（产区）
 - `estate`
 - `variety`

@@ -25,6 +25,7 @@
 
 ### 变更
 
+- **`bean add` 不再强制 `--roaster` / `--origin` / `--process`**：现在只有 `--name` 必填，和 App 的表单一致（它的表单里只有「咖啡豆名称」带必填星号）。以前少给一项就直接 exit 2，比 App 严 —— 一款不知道处理法的豆子根本存不进去。
 - `note list` 最后一列改用 `data.timestamp`（冲煮时间，毫秒数）换算，缺失时才退回行上的 `updated_at`；以前一律显示 `updated_at`，容器里改过一条记录就看不出来原始冲煮时间了。
 - `method list` 的 `1 stages` 改成 `1 stage`。
 

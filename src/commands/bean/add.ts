@@ -3,11 +3,7 @@ import { createSupabaseClient } from '../../client.ts';
 import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
-import {
-  assertComponentsUsable,
-  buildBlendComponents,
-  componentFromFlags,
-} from '../../lib/blendComponents.ts';
+import { buildBlendComponents, componentFromFlags } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { warn } from '../../lib/output.ts';
 import {
@@ -58,7 +54,6 @@ function buildBeanData(
   };
 
   const blendComponents = buildBlendComponents(args.component, componentFromFlags(args));
-  assertComponentsUsable(blendComponents);
 
   // 烘焙度：给了就照写（顺手把「浅度」补成「浅度烘焙」），没给就留空。
   // 以前没给时会按 bean-type 猜一个（filter→浅度、espresso→中深），猜错就污染 App 的筛选。
@@ -132,6 +127,11 @@ function buildBeanData(
   }
 
   beanData.blendComponents = blendComponents;
+  if (blendComponents.length === 0) {
+    // 一个成分都没有就干脆不写：App 里没填产地的豆子就是没有这个数组，
+    // 写一个空数组进去只会让「有没有填过产地」这件事变得暧昧。
+    delete beanData.blendComponents;
+  }
   beanData.beanState = beanState;
   if (beanState === 'green') {
     // 生豆没有赏味期：App 用 roastDate + startDay/endDay 算养豆/赏味阶段，生豆不看这两个值。
@@ -159,9 +159,9 @@ function buildBeanData(
 
 const argsDef = {
   name: { type: 'string', required: true },
-  roaster: { type: 'string', required: true },
-  origin: { type: 'string', description: '产地（当前口径：填国家）。' },
-  process: { type: 'string', description: '处理法。' },
+  roaster: { type: 'string', description: '烘焙商（App 里不是必填）。' },
+  origin: { type: 'string', description: '产地（当前口径：填国家）。不给就留空，和 App 一致。' },
+  process: { type: 'string', description: '处理法。不给就留空，和 App 一致。' },
   country: { type: 'string', description: '产国（产国字段启用时才用）。' },
   region: { type: 'string', description: '产区，大区+细分用空格连接，如 "古吉 罕贝拉"。' },
   estate: { type: 'string', description: '庄园 / 处理厂 / 合作社。' },
