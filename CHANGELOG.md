@@ -28,6 +28,7 @@
 
 ### 变更
 
+- **`bean get` / `note get` 默认不再打印内嵌图片**：一条带照片的豆子 JSON 能到 130 KB 以上（照片是 `data:` URL 的 base64），在终端里既看不懂也刷屏。现在图片字段换成 `[image 95 KB（已省略，加 --with-images 输出原图）]` 占位，人读视图多一行 `Images: image 95 KB`；要原图加 `--with-images`。列表类命令本来就只投影标量字段，不受影响。
 - **`bean add` 不再强制 `--roaster` / `--origin` / `--process`**：现在只有 `--name` 必填，和 App 的表单一致（它的表单里只有「咖啡豆名称」带必填星号）。以前少给一项就直接 exit 2，比 App 严 —— 一款不知道处理法的豆子根本存不进去。
 - `note list` 最后一列改用 `data.timestamp`（冲煮时间，毫秒数）换算，缺失时才退回行上的 `updated_at`；以前一律显示 `updated_at`，容器里改过一条记录就看不出来原始冲煮时间了。
 - `method list` 的 `1 stages` 改成 `1 stage`。

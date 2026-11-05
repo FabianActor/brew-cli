@@ -103,8 +103,9 @@ brew-guide bean list --limit 10
 brew-guide bean list --region 古吉 --has-remaining true
 brew-guide bean list --country Ethiopia --batch "Lot 26"
 
-# 看一款的完整字段
+# 看一款的完整字段（照片默认不打印，要原图加 --with-images）
 brew-guide bean get bean_xxx
+brew-guide bean get bean_xxx --with-images --format json > bean.json
 
 # 还剩什么烘焙商
 brew-guide roasters

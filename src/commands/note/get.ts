@@ -7,6 +7,7 @@ export default createGetCommand({
   idDescription: 'Note record ID.',
   getDescription: 'Show details for a specific brewing note.',
   fetch: getNote,
+  imageFields: ['image'],
   describe: (note) => {
     const params = (note.params ?? {}) as Record<string, unknown>;
     const taste = (note.taste ?? {}) as Record<string, unknown>;

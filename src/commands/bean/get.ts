@@ -7,6 +7,7 @@ export default createGetCommand({
   idDescription: 'Bean record ID.',
   getDescription: 'Show details for a specific coffee bean.',
   fetch: getBean,
+  imageFields: ['image', 'backImage'],
   describe: (bean) => [
     `ID:          ${bean.id}`,
     `Name:        ${bean.name ?? ''}`,
