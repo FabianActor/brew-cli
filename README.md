@@ -159,8 +159,8 @@ brew-guide bean add --name "三重奏" --roaster "TRIOON" \
 
 ```bash
 # 记完自动扣余量（--with-note 会连记录一起写）
-brew-guide note add --bean-id bean_xxx --method "V60" \
-  --equipment "冰瞳 B75" --rating 4.5 --notes "莓果，尾段偏甜" \
+brew-guide note add --bean-id bean_xxx --method "三段式" \
+  --equipment "V60" --rating 4.5 --notes "莓果，尾段偏甜" \
   --coffee 15g --water 225g --water-temp 92
 
 # 翻最近的记录，按日期/评分筛
@@ -229,10 +229,11 @@ brew-guide update-check --format json   # {"current","latest","upgradable","sour
 
 | 选项 | 行为 |
 | --- | --- |
-| `--format json` | 输出紧凑单行 JSON，走 stdout；警告、进度、错误一律走 stderr，可以直接 `| jq` |
-| `--dry-run` | 写入类命令打印将要发送的载荷，不发请求 |
+| `--format json` | 输出紧凑单行 JSON，走 stdout；警告、进度、错误一律走 stderr，可以直接 `| jq`。只认 `json` / `table`，写错直接 exit 2 |
+| `--dry-run` | 写入类命令打印将要发送的载荷，不写库（读取类校验照做；连不上库时只给提示） |
+| `--clear <字段>` | `bean update` 清空某个字段，如 `--clear price --clear flavor`；成分字段（origin/region/…）同样可清。可重复 |
 
-**参数名写错会直接 `exit 2` 并列出可用参数**，不会静默忽略。
+**参数名写错会直接 `exit 2` 并列出可用参数**，不会静默忽略。开关型参数（`--has-remaining` 这类）必须带取值：`--has-remaining true` 是「只看还有余量的」，`false` 是「只看余量为 0 的」，裸写不生效。
 
 ## 退出码
 
@@ -283,9 +284,9 @@ npm run build                 # tsup → dist/
 npm link                      # 改完只想本地用：build 一次就生效
 ```
 
-改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -g -y`。
+改完 skill 文档记得同步：`npx skills add ./skills/brew-guide -y -g`。
 
-> **发布**：改 `package.json` 版本号 → 提交 → `git tag v0.2.x && git push origin v0.2.x`。CI 跑 typecheck / build / test 后，用 npm trusted publishing（OIDC）直接发布并自动附 provenance — **不需要任何 npm token**。
+> **发布**：改 `package.json` 版本号 → 提交 → `git tag v0.3.x && git push origin v0.3.x`。CI 跑 typecheck / build / test 后，用 npm trusted publishing（OIDC）直接发布并自动附 provenance — **不需要任何 npm token**。
 >
 > 发布链的前置条件（一次性）：npm 包里登记 trusted publisher（user `FabianActor`、repo `brew-cli`、workflow `publish.yml`），Publishing access 设为「Require 2FA and disallow tokens」。配置建好后**两天内必须成功发布一次**，否则作废。`0.2.0` 是手动发的一次性引导，`0.2.1` 起全部走 tag + OIDC。
 >

@@ -158,7 +158,7 @@ Authoritative fields (match what the brew-guide frontend writes):
 - `params` (object: `{ temp, ratio, water, coffee, grindSize, stages }`)
 - `image`
 
-CLI-only legacy fields accepted by `executeUpsertNote` and translated into the
+CLI-only legacy fields accepted by `upsertNoteRecord` and translated into the
 authoritative shape on write (see `normalizeNote` in `src/tools/upsertNote.ts`):
 
 - `score` (0–100) → `rating` (`score / 20`, clamped 0–5)
@@ -308,13 +308,13 @@ Expected behavior:
 Current setup source:
 
 - the SQL example in `README.md`
-- runtime call in `src/tools/getAllRoasters.ts`
+- runtime call in `src/services/roasters.ts` (SQL lives in `src/lib/roastersSql.ts`)
 
 Important: if this function is renamed, removed, or its return shape changes, `brew-guide roasters` will break.
 
 ## Summary-field assumptions in tooling
 
-`src/tools/listRecent.ts` exposes abbreviated records. Fields reflect the real payload shape; legacy fields are kept as fallbacks for historical rows:
+`src/lib/summary.ts` projects abbreviated records for the list commands. Fields reflect the real payload shape; legacy fields are kept as fallbacks for historical rows:
 
 - `coffee_beans`: `name`, `roaster`, `origin`, `process`, `variety`, `roastLevel`, `startDay`, `endDay`
 - `brewing_notes`: `method`, `equipment`, `beanId`, `rating`, `totalTime`, `source`, `timestamp`, `notes` (+ legacy `score`, `flavor`, `ratio`, `brewTime`)

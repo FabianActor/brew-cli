@@ -14,7 +14,6 @@ Published to npm as **`@fabianactor/brew-cli`** (the unscoped `brew-cli` name is
 - CLI framework: `citty`
 - Supabase: `@supabase/supabase-js`
 - Config loader: `c12`
-- Schema validation: `@sinclair/typebox`
 - Bundler: `tsup` (esm, node18 target, shebang banner)
 - Tests: node built-in test runner via `tsx`
 
@@ -43,8 +42,8 @@ src/
   logger.ts paths.ts
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts updateCheck.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters settings
-  tools/               # upsertBean.ts / upsertNote.ts — thin adapters over services
-  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images timestamps toolResults roast noteInput equipmentTypes updateCheck
+  tools/               # upsertBean.ts / upsertNote.ts — the only write paths (record helpers)
+  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images timestamps roast noteInput equipmentTypes updateCheck
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)

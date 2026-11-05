@@ -46,7 +46,7 @@ brew-guide init
 | `bean add` | 新增（见 `references/bean-add.md`） | `brew-guide bean add --name "..." [--roaster "..."] [--origin "..."] [--process "..."] [--region ...] [--estate ...] [--processing-station ...] [--altitude ...] [--variety ...] [--batch ...] [--roast-level "浅度烘焙"] [--start-day 7] [--end-day 60] [--in-transit] [--is-frozen] [--bean-state green] [--purchase-date YYYY-MM-DD] [--price 88] [options] [--dry-run]`；**只有 `--name` 必填**（与 App 表单一致），其余留空即可；拼配加可重复的 `--component "origin=…;percentage=33"`（烘焙度不给就留空，不猜；`--start-day/--end-day` 不给时读 App 的赏味期设置：烘焙商配置 → 全局自定义 → 预设浅 7/60、中 10/60、深 14/90，且没有 `--roast-date` 时这组天数不生效；在途与冷冻互斥；生豆不能有 `--roast-date`） |
 | `bean list` | 列出 | `brew-guide bean list [--limit N] [--roast-level "浅度烘焙"] [--bean-type filter] [--roaster "MAME"] [--region 古吉] [--process 日晒] [--variety 74158] [--country 埃塞俄比亚] [--batch "Lot 26"] [--has-remaining true] [--format json]`（产区/处理法/品种/产国/批次是包含匹配，`--region 古吉` 命中「古吉 罕贝拉」；产国字段空时 `--country` 回落到产地） |
 | `bean get` | 详情 | `brew-guide bean get <id> [--with-images] [--format json]`（照片是内嵌 base64，默认换成 `[image 95 KB（已省略…）]` 占位；要原图加 `--with-images`） |
-| `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--region "..."] [--processing-station "..."] [--altitude "..."] [--process "..."] [--variety "..."] [--estate "..."] [--batch "..."] [--percentage 33] [--component-index 2] [--component "origin=…;percentage=50"] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--in-transit|--no-in-transit] [--is-frozen|--no-frozen] [--bean-state green|roasted] [--purchase-date YYYY-MM-DD] [--dry-run]`（成分字段合并进 `--component-index` 指定的成分，默认第 1 个；`--component` 整组替换；转生豆会清掉烘焙日期与赏味期）|
+| `bean update` | 更新 | `brew-guide bean update <id> --remaining "..." [--origin "..."] [--region "..."] [--processing-station "..."] [--altitude "..."] [--process "..."] [--variety "..."] [--estate "..."] [--batch "..."] [--percentage 33] [--component-index 2] [--component "origin=…;percentage=50"] [--roast-date "YYYY-MM-DD"] [--start-day 30] [--end-day 60] [--clear price|flavor|altitude|region|...] [--in-transit|--no-in-transit] [--is-frozen|--no-frozen] [--bean-state green|roasted] [--purchase-date YYYY-MM-DD] [--dry-run]`（成分字段合并进 `--component-index` 指定的成分，默认第 1 个；`--component` 整组替换；转生豆会清掉烘焙日期与赏味期；`--clear <字段>` 把字段写成空值，可重复）|
 | `bean delete` | 软删除 | `brew-guide bean delete <id> [--dry-run]` |
 | `bean consume` | 扣减余量 | `brew-guide bean consume <id> --amount 15 [--with-note] [--source quick-decrement] [--dry-run]`；请求量超过库存时余量归零并在 stderr 警告，`--with-note` 只记实际扣掉的量 |
 
@@ -111,7 +111,7 @@ brew-guide update-check [--format json]
 ### 通用 flags
 
 - `--dry-run`：预览即将执行的操作，不实际写入
-- `--format json`：以 JSON 格式输出（stdout 单行紧凑；警告与错误走 stderr，可直接管道给 `jq`）。Windows 上输出被管道/重定向时，非 ASCII 字符会转成 `\uXXXX`（避免 GBK 控制台解码后破坏 JSON 结构），解析回来仍是原文，不用特殊处理。
+- `--format json` / `--format table`：输出格式只有这两种，写错直接 exit 2；JSON 走 stdout 单行紧凑，警告与错误走 stderr，可直接管道给 `jq`。Windows 上输出被管道/重定向时，非 ASCII 字符会转成 `\uXXXX`（避免 GBK 控制台解码后破坏 JSON 结构），解析回来仍是原文，不用特殊处理。
 
 退出码：`0` 成功 / `1` 运行时失败 / `2` 参数用法错误 / `64` 缺少或错误的配置 / `65` 网络请求失败。看到 `2` 先改参数，别重试。
 

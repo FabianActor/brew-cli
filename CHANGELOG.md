@@ -16,8 +16,24 @@
 
 ## [未发布]
 
+### 新增
+
+- **`bean update --clear <字段>` 可以清空字段了**：以前想清掉一个字段没有正经办法——`--price ""` 报「不能是空字符串」，`--altitude ""` 被直接忽略、命令还回一句「No fields to update」。现在 `--clear price --clear flavor` 就写成空值，成分字段（origin / region / estate / processing-station / process / variety / altitude / batch / country）同样可清；同名字段既给值又 `--clear` 会直接报错，写错的字段名会列出全部可清字段。
+- **`note add --dry-run` 会先校验豆子和器具**：以前预览永远成功，真跑才发现 `--bean-id` / `--equipment` 写错了。现在能读配置就先查一遍，读不到配置则在 stderr 明说「没校验」。
+
+### 修复
+
+- **`--format` 写错会静默退回人类视图**：以前 `--format jsn`、`--format JSON` 都 exit 0，只是输出变成默认表格——用管道接JSON的人会拿到一屏人类文本。现在只认 `json` / `table`，写错 exit 2。
+- **`bean add` / `bean update` / `note update` 的 `--format json` 在 Windows 管道里没转义**：另外三个命令上一版已统一走 `printJson`，这三个漏了，于是 `| ConvertFrom-Json` 在这三条命令上仍会碎。现在全部走同一个出口。
+- **`--has-remaining` 裸写等于没过滤**：它是开关型参数，裸写 `--has-remaining` 会被当成空字符串、43 款全出（看起来像筛过了）；写 `false` 又变成「只看余量为 0 的」，语义和直觉相反。现在必须带取值，取值不合法 exit 2，帮助里写清 true / false 各是什么。
+- **不可能日期照写**：`--roast-date 2026-02-30`、`2026-13-45` 以前只校验格式，日历上不存在的日期照样写进库。现在会回读校验，报「在日历上不存在」并 exit 2。
+- **生豆被写进赏味期**：`bean update --bean-state green --start-day 30` 会先把赏味期清零、又被后面的 `--start-day` 覆盖回去，结果是一颗带赏味期的生豆。现在这两个参数冲突直接报错。
+- **`bean update --bean-state green` 与在途/冷冻的判定**：顺手收紧，只有用户显式给了开关才改，不再顺带把 `isInTransit` 重置。
+
 ### 变更
 
+- README 修正若干：记一杯的例子改用内置器具名（自定义器具要写 ID，照抄旧例子会 exit 2）、发布命令改为 `v0.3.x`、`--dry-run` 的描述从「不发请求」改成「不写库」（它现在会做只读校验）。
+- 删掉 MCP 时代的残留代码：`executeUpsertBean` / `executeUpsertNote` 工具包装、`src/lib/toolResults.ts`、`@sinclair/typebox` 依赖。仓库里只留真正在用的写入口（`upsertBeanRecord` / `upsertNoteRecord`）。
 - **`init` 不再问 User ID，固定写 `default_user`**：以前那一步能填任何字符串，填了也不报错，但 App 侧的同步标识是硬编码的（`syncOperations.ts` 的 `DEFAULT_USER_ID`）——填别的名字只是得到一份 App 里根本不存在的数据，而用户不会知道。现在只剩两个问题（URL、API key），配置里写的永远是 `default_user`。如果你之前手工改过配置里的 `brewGuideUserId`，CLI 仍按那个值读写，但每次运行会在 stderr 提醒「App 里看不到」。
 
 ## [0.3.2] - 2026-11-05
