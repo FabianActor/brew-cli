@@ -160,9 +160,18 @@ test('startBackgroundUpdateCheck leaves a fresh cache alone', async () => {
   assert.equal((await readUpdateCache(cachePath))?.latest, '0.3.0');
 });
 
+// 提示里的版本号必须取自 package.json：写死成 "0.3.1" 会在版本升到 0.3.1 那天
+// 变成「自己就是最新版，当然不提示」，用例假红（2026-11-05 发布 0.3.1 时撞过一次）。
+const packageJson = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const CURRENT_VERSION = packageJson.version;
+const NEXT_VERSION = (() => {
+  const [major, minor, patch] = String(CURRENT_VERSION).split('.').map(Number);
+  return `${major}.${minor}.${patch + 1}`;
+})();
+
 test('the CLI prints the notice from cache before running the command', async () => {
   const { dir, cachePath } = await makeCachePath();
-  await writeUpdateCache({ checkedAt: new Date().toISOString(), latest: '0.3.1' }, cachePath);
+  await writeUpdateCache({ checkedAt: new Date().toISOString(), latest: NEXT_VERSION }, cachePath);
 
   const result = runCliSync(['bean', 'list'], {
     env: {
@@ -171,7 +180,8 @@ test('the CLI prints the notice from cache before running the command', async ()
     },
   });
 
-  assert.match(result.stderr, /0\.3\.1 已发布/);
+  assert.match(result.stderr, new RegExp(`${NEXT_VERSION.replace(/\./g, '\\.')} 已发布`));
+  assert.match(result.stderr, new RegExp(`${CURRENT_VERSION.replace(/\./g, '\\.')}）`));
   assert.match(result.stderr, /npm install -g @fabianactor\/brew-cli@latest/);
 });
 
