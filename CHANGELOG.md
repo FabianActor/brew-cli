@@ -16,6 +16,12 @@
 
 ## [未发布]
 
+暂无。下一版的改动会先写在这里。
+
+## [0.3.2] - 2026-11-05
+
+这一版全在修「用起来别扭」的地方：列表里的 ID 不能拿去当下一条命令的参数、JSON 在中文 Windows 管道里会碎、必填项比 App 严、读一条豆子会刷出 130 KB 的 base64。
+
 ### 修复
 
 - **`equipment list` / `method list` 的 ID 被截成前 8 位**：以前 `equipment list` 打出 `custom-o`、`method list` 打出 `method-1`（八条一模一样），复制出来根本没法当 `--equipment-id` 用。现在一律打完整 ID —— 列表存在的意义就是能拿去喂给下一条命令。
@@ -193,7 +199,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.1...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/FabianActor/brew-cli/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FabianActor/brew-cli/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FabianActor/brew-cli/compare/v0.2.1...v0.2.2
