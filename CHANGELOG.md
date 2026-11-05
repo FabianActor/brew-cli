@@ -16,6 +16,12 @@
 
 ## [未发布]
 
+暂无。
+
+## [0.3.3] - 2026-11-05
+
+这一版把「看起来成功、其实没生效」的地方一条条堵上了：`--format` 写错会静默退回表格、`--has-remaining` 裸写等于没筛、日历上不存在的日期照写、生豆能被写进赏味期。另外新增 `--clear`，终于能清空字段了。
+
 ### 新增
 
 - **`bean update --clear <字段>` 可以清空字段了**：以前想清掉一个字段没有正经办法——`--price ""` 报「不能是空字符串」，`--altitude ""` 被直接忽略、命令还回一句「No fields to update」。现在 `--clear price --clear flavor` 就写成空值，成分字段（origin / region / estate / processing-station / process / variety / altitude / batch / country）同样可清；同名字段既给值又 `--clear` 会直接报错，写错的字段名会列出全部可清字段。
@@ -217,7 +223,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.2...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/FabianActor/brew-cli/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FabianActor/brew-cli/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FabianActor/brew-cli/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...v0.3.0
