@@ -1,12 +1,13 @@
 import { defineCommand } from 'citty';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient } from '../../client.ts';
-import { resolveConfig } from '../../config.ts';
+import { resolveConfig, type BrewGuideConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { builtinEquipmentHint, findBuiltinEquipment } from '../../lib/equipmentTypes.ts';
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
-import { printJson } from '../../lib/output.ts';
+import { printJson, warn } from '../../lib/output.ts';
 import { fetchRecordById } from '../../services/base.ts';
 import { getEquipment } from '../../services/equipment.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
@@ -129,6 +130,58 @@ water: { type: 'string', description: '水量，如 225g（→ params.water）�
   format: { type: 'string' },
 } as const;
 
+/**
+ * 校验记录里的两个软引用，并把豆子快照补进 payload。
+ *
+ * - `beanId`：给了就必须真的存在（否则备注挂在一款不存在的豆子上）；不给也合法 ——
+ *   App 里不选豆子同样能存记录。
+ * - `equipment`：内置器具（V60 / 聪明杯 …）在 buildNoteData 里已经认过并写好 id，
+ *   这里只处理自定义器具，查不到就报错，免得记录指不上任何器具。
+ *
+ * dry-run 也走这一遍（有配置时），免得「预览成功、真跑失败」。
+ */
+async function resolveReferences(
+  supabase: SupabaseClient,
+  config: BrewGuideConfig,
+  noteData: Record<string, unknown>,
+): Promise<void> {
+  const beanId = typeof noteData.beanId === 'string' ? noteData.beanId : '';
+  const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
+  if (beanId && !bean) {
+    throw new Error(`bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`);
+  }
+  if (bean) {
+    // App 的冲煮记录里存了一份豆子快照（page.tsx:211-216）：之后豆子改名或改烘焙度，
+    // 旧记录仍然显示当时的样子。以前 CLI 不写这段，App 里只能靠 beanId 反查。
+    const beanFields = (bean.data ?? {}) as Record<string, unknown>;
+    noteData.coffeeBeanInfo = {
+      name: typeof beanFields.name === 'string' ? beanFields.name : '',
+      roastLevel:
+        typeof beanFields.roastLevel === 'string' && beanFields.roastLevel
+          ? beanFields.roastLevel
+          : '中度烘焙',
+      roastDate: typeof beanFields.roastDate === 'string' ? beanFields.roastDate : '',
+      ...(typeof beanFields.roaster === 'string' && beanFields.roaster
+        ? { roaster: beanFields.roaster }
+        : {}),
+    };
+  }
+
+  const equipmentInput =
+    typeof noteData.equipment === 'string' && !noteData.equipmentId
+      ? noteData.equipment.trim()
+      : '';
+  if (equipmentInput) {
+    const custom = await getEquipment(supabase, equipmentInput, config.brewGuideUserId);
+    if (!custom) {
+      throw new Error(
+        `equipment ${equipmentInput} 不存在（或已删除）。${builtinEquipmentHint()}；自定义器具先用 brew-guide equipment list 确认 ID。`,
+      );
+    }
+    noteData.equipmentId = equipmentInput;
+  }
+}
+
 export default defineCommand({
   meta: {
     name: 'add',
@@ -143,6 +196,17 @@ export default defineCommand({
     const jsonFormat = args.format === 'json';
 
     if (dryRun) {
+      // dry-run 以前完全不碰库，于是「预览成功、真跑失败」：豆子/器具不存在要到真写才报错。
+      // 现在有配置就顺手校验一遍；没有配置（或读不到）就明说没校验，不假装验过了。
+      try {
+        const config = await resolveConfig();
+        const supabase = createSupabaseClient(config);
+        await resolveReferences(supabase, config, noteData);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        warn(`提示：dry-run 没能校验豆子 / 器具是否存在（${message}）。真跑时才会报。`);
+      }
+
       if (jsonFormat) {
         printJson({ dryRun: true, note: noteData });
         await logger.success();
@@ -157,47 +221,7 @@ export default defineCommand({
     try {
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
-
-      // beanId 是软引用：给了就确认豆子真的存在，否则备注会挂在一款不存在的豆子上。
-      // 不给也合法 —— App 里不选豆子同样能存记录。
-      const beanId = typeof noteData.beanId === 'string' ? noteData.beanId : '';
-      const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
-      if (beanId && !bean) {
-        exitWithError(`Error: bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`, EXIT.USAGE);
-      }
-      if (bean) {
-        // App 的冲煮记录里存了一份豆子快照（page.tsx:211-216）：之后豆子改名或改烘焙度，
-        // 旧记录仍然显示当时的样子。以前 CLI 不写这段，App 里只能靠 beanId 反查。
-        const beanFields = (bean.data ?? {}) as Record<string, unknown>;
-        noteData.coffeeBeanInfo = {
-          name: typeof beanFields.name === 'string' ? beanFields.name : '',
-          roastLevel:
-            typeof beanFields.roastLevel === 'string' && beanFields.roastLevel
-              ? beanFields.roastLevel
-              : '中度烘焙',
-          roastDate: typeof beanFields.roastDate === 'string' ? beanFields.roastDate : '',
-          ...(typeof beanFields.roaster === 'string' && beanFields.roaster
-            ? { roaster: beanFields.roaster }
-            : {}),
-        };
-      }
-
-      // equipment 同样是软引用：内置器具在 buildNoteData 里已经认过并写好 equipmentId，
-      // 这里只处理自定义器具 —— 查不到就报错，免得记录指不上任何器具。
-      const equipmentInput =
-        typeof noteData.equipment === 'string' && !noteData.equipmentId
-          ? noteData.equipment.trim()
-          : '';
-      if (equipmentInput) {
-        const custom = await getEquipment(supabase, equipmentInput, config.brewGuideUserId);
-        if (!custom) {
-          exitWithError(
-            `Error: equipment ${equipmentInput} 不存在（或已删除）。${builtinEquipmentHint()}；自定义器具先用 brew-guide equipment list 确认 ID。`,
-            EXIT.USAGE,
-          );
-        }
-        noteData.equipmentId = equipmentInput;
-      }
+      await resolveReferences(supabase, config, noteData);
 
       const { id, timestamp } = await upsertNoteRecord(supabase, config, noteData);
 
@@ -217,6 +241,9 @@ export default defineCommand({
       }
       if (/^Failed to (upsert|list|fetch|get)/i.test(message)) {
         exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
+      }
+      if (/不存在（或已删除）/.test(message)) {
+        exitWithError(`Error: ${message}`, EXIT.USAGE);
       }
       exitWithError(`Error: ${message}`, EXIT.FAILURE);
     }

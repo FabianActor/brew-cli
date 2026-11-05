@@ -8,6 +8,8 @@
  * 不会被夹在中间的提示行破坏。
  */
 
+import { EXIT, exitWithError } from './exit.ts';
+
 /**
  * 把 JSON 文本里的非 ASCII 字符换成 `\uXXXX`。
  *
@@ -50,6 +52,40 @@ export function printJson(value: unknown): void {
 /** 提示/警告：不污染 stdout。 */
 export function warn(message: string): void {
   console.error(message);
+}
+
+/** `--format` 认的取值。`table` 是默认的人类视图，写出来只是让意图显式。 */
+export const FORMAT_VALUES = ['json', 'table'] as const;
+export type OutputFormat = (typeof FORMAT_VALUES)[number];
+
+/**
+ * 在命令分发前校验 `--format` 的取值。
+ *
+ * 不校验的话 `--format jsn` 会静默退回人类视图、exit 0 —— 调用方以为拿到了 JSON，
+ * 实际拿到的是给人看的表格。放在 main 里统一守，省得二十个命令各写一份。
+ */
+export function assertValidFormat(argv: readonly string[]): void {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const prefix = '--format=';
+    let value: string | undefined;
+    if (arg === '--format') {
+      value = argv[index + 1];
+      // 后面跟的是另一个 flag（或没有）时，交给 citty 报「缺值」，这里不抢它的活。
+      if (value === undefined || value.startsWith('-')) continue;
+    } else if (arg.startsWith(prefix)) {
+      value = arg.slice(prefix.length);
+    } else {
+      continue;
+    }
+    if (!(FORMAT_VALUES as readonly string[]).includes(value)) {
+      exitWithError(
+        `Error: --format 只接受 ${FORMAT_VALUES.join(' 或 ')}，收到 "${value}"。` +
+          '\n       想看 JSON 就写 --format json；人类视图是默认值，可以不写。',
+        EXIT.USAGE,
+      );
+    }
+  }
 }
 
 /**

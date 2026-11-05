@@ -1,49 +1,21 @@
-import { Type } from '@sinclair/typebox';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BrewGuideConfig } from '../config.ts';
 import { generateId } from '../lib/ids.ts';
 import { now } from '../lib/timestamps.ts';
-import { getErrorMessage, invalidParamsResult, isRecord, textResult } from '../lib/toolResults.ts';
 
-/**
- * brew_guide_upsert_note 工具的参数 schema。
- *
- * 真实 brewing_notes.data 形状（参考线上数据）：
- *   { id, beanId, method, equipment, coffeeBeanInfo,
- *     rating (0-5), taste {body,acidity,sweetness,bitterness},
- *     notes, timestamp (unix ms), totalTime (number),
- *     params { temp, ratio, water, coffee, grindSize, stages },
- *     source }
- *
- * 此 schema 同时接受旧的扁平字段（score/flavor/memo/brewedAt/brewTime/waterTemp/
- * ratio/grindSize），并在写入前转换到真实形状，保持 CLI 向后兼容。
- */
-export const upsertNoteParameters = Type.Object({
-  note: Type.Object(
-    {
-      id: Type.Optional(Type.String({ description: 'Note record ID. Auto-generated if omitted.' })),
-      beanId: Type.Optional(Type.String({ description: 'Associated coffee bean ID.' })),
-      method: Type.Optional(Type.String({ description: 'Brewing method name (e.g. "日式冲煮").' })),
-      equipment: Type.Optional(Type.String({ description: 'Equipment ID (e.g. V60, Espresso).' })),
-      rating: Type.Optional(Type.Number({ description: 'Rating 0-5 (authoritative).' })),
-      totalTime: Type.Optional(Type.Number({ description: 'Total brew time in seconds.' })),
-      timestamp: Type.Optional(Type.Number({ description: 'Brew timestamp as unix ms.' })),
-      notes: Type.Optional(Type.String({ description: 'Free-form notes.' })),
-      source: Type.Optional(Type.String({ description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' })),
-      // Legacy flat fields — transformed on write:
-      grindSize: Type.Optional(Type.String({ description: '[legacy] → params.grindSize.' })),
-      waterTemp: Type.Optional(Type.Number({ description: '[legacy] → params.temp (°C).' })),
-      ratio: Type.Optional(Type.String({ description: '[legacy] → params.ratio.' })),
-      brewTime: Type.Optional(Type.String({ description: '[legacy] → totalTime.' })),
-      flavor: Type.Optional(Type.String({ description: '[legacy] merged into notes.' })),
-      score: Type.Optional(Type.Number({ description: '[legacy] 0-100 → rating 0-5 (/20).' })),
-      memo: Type.Optional(Type.String({ description: '[legacy] → notes.' })),
-      brewedAt: Type.Optional(Type.String({ description: '[legacy] ISO → timestamp (unix ms).' })),
-    },
-    { additionalProperties: true },
-  ),
-});
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
+// 真实 brewing_notes.data 形状（参考线上数据）：
+//   { id, beanId, method, equipment, coffeeBeanInfo,
+//     rating (0-5), taste {body,acidity,sweetness,bitterness},
+//     notes, timestamp (unix ms), totalTime (number),
+//     params { temp, ratio, water, coffee, grindSize, stages },
+//     source }
+//
+// normalizeNote 同时接受旧的扁平字段（score/flavor/memo/brewedAt/brewTime/waterTemp/
+// ratio/grindSize），并在写入前转换到真实形状，保持 CLI 向后兼容。
 /**
  * 将用户输入（可能夹带老式扁平字段）归一化到真实 brewing_notes.data 形状。
  * 原字段保留在结果中（additionalProperties）以维持向后兼容；
@@ -148,25 +120,4 @@ export async function upsertNoteRecord(
   }
 
   return { id, timestamp: ts };
-}
-
-/**
- * 执行冲煮记录 upsert 操作。
- */
-export async function executeUpsertNote(
-  supabase: SupabaseClient,
-  config: BrewGuideConfig,
-  params: { note: Record<string, unknown> } | undefined,
-) {
-  if (!isRecord(params) || !isRecord(params.note)) {
-    return invalidParamsResult('brew_guide_upsert_note', '{ note: object }');
-  }
-
-  try {
-    const { id, timestamp } = await upsertNoteRecord(supabase, config, params.note);
-    return textResult(`Upserted brewing note ${id} at ${timestamp}.`);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    return textResult(/^Failed to upsert note:/.test(message) ? message : `Failed to upsert note: ${message}`);
-  }
 }

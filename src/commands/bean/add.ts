@@ -5,7 +5,7 @@ import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { buildBlendComponents, componentFromFlags } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
-import { warn } from '../../lib/output.ts';
+import { printJson, warn } from '../../lib/output.ts';
 import {
   parseBeanState,
   parseDateOnly,
@@ -226,7 +226,7 @@ export default defineCommand({
 
     if (dryRun) {
       if (jsonFormat) {
-        console.log(JSON.stringify({ dryRun: true, bean: beanData }));
+        printJson({ dryRun: true, bean: beanData });
         await logger.success();
         return;
       }
@@ -242,7 +242,7 @@ export default defineCommand({
       const { id, timestamp } = await upsertBeanRecord(supabase, config, beanData);
 
       if (jsonFormat) {
-        console.log(JSON.stringify({ id, status: 'created', timestamp }));
+        printJson({ id, status: 'created', timestamp });
         await logger.success();
         return;
       }

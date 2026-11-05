@@ -8,6 +8,7 @@ import methodCommand from './commands/method/index.ts';
 import noteCommand from './commands/note/index.ts';
 import roastersCommand from './commands/roasters.ts';
 import updateCheckCommand from './commands/updateCheck.ts';
+import { assertValidFormat } from './lib/output.ts';
 import { maybeNotifyUpdate, startBackgroundUpdateCheck } from './lib/updateCheck.ts';
 
 const main = defineCommand({
@@ -40,7 +41,10 @@ function shouldCheckForUpdates(argv: string[]): boolean {
 }
 
 async function bootstrap(): Promise<void> {
-  if (shouldCheckForUpdates(process.argv.slice(2))) {
+  const argv = process.argv.slice(2);
+  // 写错的 --format 会在任何命令里静默退回人类视图，这里统一拦下。
+  assertValidFormat(argv);
+  if (shouldCheckForUpdates(argv)) {
     // 后台刷新缓存（不阻塞）；提示只用缓存里的结果，不联网等待。
     startBackgroundUpdateCheck(packageJson.version);
     await maybeNotifyUpdate(packageJson.version);

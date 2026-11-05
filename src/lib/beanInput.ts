@@ -21,9 +21,25 @@ export function todayLocalDate(date = new Date()): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/**
+ * `YYYY-MM-DD` 并且**日历上真的存在**。
+ *
+ * 只验格式的话 `2026-13-45`、`2026-02-30` 都能写进去，App 读出来是 Invalid Date
+ * （赏味期显示成未设置或 NaN 天），而用户以为自己填对了。
+ */
 export function parseDateOnly(value: string, flag: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
     exitWithError(`Error: ${flag} must be YYYY-MM-DD.`, EXIT.USAGE);
+  }
+  const [, year, month, day] = match;
+  const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    parsed.getUTCFullYear() !== Number(year) ||
+    parsed.getUTCMonth() !== Number(month) - 1 ||
+    parsed.getUTCDate() !== Number(day)
+  ) {
+    exitWithError(`Error: ${flag} 不是有效日期：${value} 在日历上不存在。`, EXIT.USAGE);
   }
   return value;
 }

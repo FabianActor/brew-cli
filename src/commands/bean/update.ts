@@ -5,7 +5,7 @@ import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { buildBlendComponents, componentFromFlags } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
-import { warn } from '../../lib/output.ts';
+import { printJson, warn } from '../../lib/output.ts';
 import {
   parseBeanState,
   parseDateOnly,
@@ -16,6 +16,31 @@ import {
 import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { updateBean } from '../../services/beans.ts';
+
+/** `--clear` 能清的标量字段：flag 名 → data 里的键名。 */
+const CLEARABLE_SCALARS: Record<string, string> = {
+  roaster: 'roaster',
+  'roast-level': 'roastLevel',
+  'bean-type': 'beanType',
+  flavor: 'flavor',
+  capacity: 'capacity',
+  remaining: 'remaining',
+  price: 'price',
+  notes: 'notes',
+};
+
+/** `--clear` 能清的成分字段：flag 名 → blendComponents 里的键名。 */
+const CLEARABLE_COMPONENT_FLAGS: Record<string, string> = {
+  origin: 'origin',
+  country: 'country',
+  region: 'region',
+  estate: 'estate',
+  'processing-station': 'processingStation',
+  process: 'process',
+  variety: 'variety',
+  altitude: 'altitude',
+  batch: 'batch',
+};
 
 const argsDef = {
 id: { type: 'positional', required: true, description: 'Bean record ID.' },
@@ -51,6 +76,11 @@ id: { type: 'positional', required: true, description: 'Bean record ID.' },
   'end-day': { type: 'string', description: 'Optimal end day after roast.' },
   'bean-type': { type: 'string', description: '豆种：filter / espresso / omni。' },
   flavor: { type: 'string', description: '风味，逗号分隔，如 "花香,莓果"。' },
+  clear: {
+    type: 'string',
+    description:
+      '清空某个字段（可重复），如 --clear price --clear roaster。可清：roaster / roast-level / bean-type / flavor / capacity / remaining / price / notes / origin / country / region / estate / processing-station / process / variety / altitude / batch。',
+  },
   'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
   format: { type: 'string' },
 } as const;
@@ -116,6 +146,16 @@ export default defineCommand({
             EXIT.USAGE,
           );
         }
+        // 生豆也没有赏味期：明确给天数就直接拒绝，别写进去让 App 面面相觑。
+        if (
+          (typeof args['start-day'] === 'string' && args['start-day']) ||
+          (typeof args['end-day'] === 'string' && args['end-day'])
+        ) {
+          exitWithError(
+            'Error: 生豆没有赏味期（--bean-state green 与 --start-day / --end-day 冲突）。',
+            EXIT.USAGE,
+          );
+        }
         // 生豆只看购买日期；赏味期两个值清零（App 把非正数当未设置）。
         updates.purchaseDate = purchaseDateArg
           ? parseDateOnly(purchaseDateArg, '--purchase-date')
@@ -171,13 +211,52 @@ export default defineCommand({
       updates.endDay = n;
     }
 
+    // --clear：显式清空某个字段。App 里这些字段都能删掉，CLI 也得能 —— 但不能靠
+    // 「传个空字符串」来表达，那样和「忘了填」分不开，所以单独给一个开关。
+    const clearRaw = args.clear as unknown;
+    const clearSpecs = Array.isArray(clearRaw)
+      ? clearRaw
+      : typeof clearRaw === 'string' && clearRaw.trim()
+        ? [clearRaw]
+        : [];
+    for (const spec of clearSpecs) {
+      const field = String(spec).trim().toLowerCase().replace(/[_\s]+/g, '-');
+      const scalarKey = CLEARABLE_SCALARS[field];
+      if (scalarKey) {
+        if (typeof args[field as keyof typeof args] === 'string' && args[field as keyof typeof args]) {
+          exitWithError(`Error: --${field} 和 --clear ${field} 不能同时给。`, EXIT.USAGE);
+        }
+        updates[scalarKey] = '';
+        continue;
+      }
+      const componentKey = CLEARABLE_COMPONENT_FLAGS[field];
+      if (componentKey) {
+        if (typeof args[field as keyof typeof args] === 'string' && args[field as keyof typeof args]) {
+          exitWithError(`Error: --${field} 和 --clear ${field} 不能同时给。`, EXIT.USAGE);
+        }
+        updates[componentKey] = '';
+        if (updates.componentIndex === undefined) {
+          const rawIndex = typeof args['component-index'] === 'string' ? Number(args['component-index']) : 1;
+          if (!Number.isInteger(rawIndex) || rawIndex < 1) {
+            exitWithError('Error: --component-index 必须是从 1 开始的整数。', EXIT.USAGE);
+          }
+          updates.componentIndex = rawIndex - 1;
+        }
+        continue;
+      }
+      exitWithError(
+        `Error: --clear 不认识字段 "${field}"。可清：${Object.keys(CLEARABLE_SCALARS).join(' / ')} / ${Object.keys(CLEARABLE_COMPONENT_FLAGS).join(' / ')}。`,
+        EXIT.USAGE,
+      );
+    }
+
     if (Object.keys(updates).length === 0) {
       exitWithError('No fields to update. Use --name, --roaster, etc.', EXIT.USAGE);
     }
 
     if (args['dry-run']) {
       if (args.format === 'json') {
-        console.log(JSON.stringify({ dryRun: true, action: 'update', id: args.id, updates }));
+        printJson({ dryRun: true, action: 'update', id: args.id, updates });
       } else {
         console.log(`[dry-run] Would update bean ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
@@ -196,7 +275,7 @@ export default defineCommand({
       }
 
       if (args.format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
+        printJson(result);
       } else {
         console.log(`Updated bean: ${result.name ?? args.id}`);
       }

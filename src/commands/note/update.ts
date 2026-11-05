@@ -5,6 +5,7 @@ import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
+import { printJson } from '../../lib/output.ts';
 import { updateNote } from '../../services/notes.ts';
 
 /** 解析 0-5 的评分字段，非法时直接按用法错误退出。 */
@@ -100,7 +101,7 @@ export default defineCommand({
 
     if (args['dry-run']) {
       if (args.format === 'json') {
-        console.log(JSON.stringify({ dryRun: true, action: 'update', id: args.id, updates }));
+        printJson({ dryRun: true, action: 'update', id: args.id, updates });
       } else {
         console.log(`[dry-run] Would update note ${args.id}:\n${JSON.stringify(updates, null, 2)}`);
       }
@@ -119,7 +120,7 @@ export default defineCommand({
       }
 
       if (args.format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
+        printJson(result);
       } else {
         console.log(`Updated note ${args.id}`);
       }

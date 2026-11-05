@@ -36,7 +36,11 @@ const argsDef = {
   country: { type: 'string', description: '按产国筛（包含匹配，如 "Ethiopia"）；产国字段空时回落到产地。' },
   batch: { type: 'string', description: '按批次筛（包含匹配，如 "Lot 26"）。' },
   roaster: { type: 'string', description: '按烘焙商筛（包含匹配）。' },
-  'has-remaining': { type: 'string', description: 'Only beans with remaining > 0: true / false.' },
+  'has-remaining': {
+    type: 'string',
+    description:
+      '按余量筛：true 只看还有余量的，false 只看余量为 0 的。必须带取值，裸写不会生效。',
+  },
   format: { type: 'string' },
 } as const;
 
@@ -57,10 +61,14 @@ export default defineCommand({
     }
 
     let hasRemaining: boolean | undefined;
-    if (typeof args['has-remaining'] === 'string' && args['has-remaining']) {
-      const value = args['has-remaining'].toLowerCase();
+    if ('has-remaining' in args && args['has-remaining'] !== undefined) {
+      const value = String(args['has-remaining']).trim().toLowerCase();
       if (value !== 'true' && value !== 'false') {
-        exitWithError('Error: --has-remaining must be "true" or "false".', EXIT.USAGE);
+        // 裸写 --has-remaining 以前是静默忽略（看着像筛过了），现在直接停在用法错误上。
+        exitWithError(
+          `Error: --has-remaining 需要取值：true（只看还有余量的）或 false（只看余量为 0 的），收到 "${value}"。`,
+          EXIT.USAGE,
+        );
       }
       hasRemaining = value === 'true';
     }

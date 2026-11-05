@@ -1,67 +1,14 @@
-import { Type } from '@sinclair/typebox';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BrewGuideConfig } from '../config.ts';
 import { generateId } from '../lib/ids.ts';
 import { now } from '../lib/timestamps.ts';
-import { getErrorMessage, invalidParamsResult, isRecord, textResult } from '../lib/toolResults.ts';
 import { normalizeWeight } from '../lib/weights.ts';
 import type { CoffeeBean } from '../types/coffeeBean.ts';
 
 /**
- * brew_guide_upsert_bean 工具的参数 schema。
- * 定义具体字段但允许额外属性，兼顾校验和灵活性。
- */
-export const upsertBeanParameters = Type.Object({
-  bean: Type.Object(
-    {
-      id: Type.Optional(Type.String({ description: 'Bean record ID. Auto-generated if omitted.' })),
-      name: Type.String({ description: 'Coffee bean name.' }),
-      origin: Type.Optional(Type.String({ description: 'Country or region of origin (legacy field: put the country here).' })),
-      country: Type.Optional(Type.String({ description: 'Country of origin (only when the country field is enabled).' })),
-      region: Type.Optional(Type.String({ description: 'Region, e.g. "Guji Hambela".' })),
-      estate: Type.Optional(Type.String({ description: 'Estate / washing station / cooperative name.' })),
-      processingStation: Type.Optional(Type.String({ description: 'Processing station, when explicitly labeled.' })),
-      altitude: Type.Optional(Type.String({ description: 'Altitude, e.g. "1920-2020m".' })),
-      roaster: Type.Optional(Type.String({ description: 'Roaster name.' })),
-      process: Type.Optional(Type.String({ description: 'Processing method (e.g. washed, natural).' })),
-      variety: Type.Optional(Type.String({ description: 'Coffee variety (e.g. Gesha, Typica).' })),
-      batch: Type.Optional(Type.String({ description: 'Lot / batch.' })),
-      blendComponents: Type.Optional(
-        Type.Array(
-          Type.Object(
-            {
-              percentage: Type.Optional(Type.Number({ description: 'Share of the blend, 1-100.' })),
-              origin: Type.Optional(Type.String()),
-              country: Type.Optional(Type.String()),
-              region: Type.Optional(Type.String()),
-              estate: Type.Optional(Type.String()),
-              processingStation: Type.Optional(Type.String()),
-              altitude: Type.Optional(Type.String()),
-              process: Type.Optional(Type.String()),
-              variety: Type.Optional(Type.String()),
-              batch: Type.Optional(Type.String()),
-            },
-            { additionalProperties: true },
-          ),
-          { description: 'Blend components. Overrides the flat origin/process/... fields.' },
-        ),
-      ),
-      roastLevel: Type.Optional(Type.String({ description: 'Roast level (e.g. light, medium, dark).' })),
-      purchaseDate: Type.Optional(Type.String({ description: 'Purchase date (ISO string).' })),
-      roastDate: Type.Optional(Type.String({ description: 'Roast date (ISO string).' })),
-      isInTransit: Type.Optional(Type.Boolean({ description: 'Whether the bean is still in transit.' })),
-      startDay: Type.Optional(Type.Number({ description: 'Recommended resting start day as a number.' })),
-      endDay: Type.Optional(Type.Number({ description: 'Recommended resting end day as a number.' })),
-      notes: Type.Optional(Type.String({ description: 'Free-form notes about this bean.' })),
-    },
-    { additionalProperties: true },
-  ),
-});
-
-/**
- * 写入一款咖啡豆（结构化入口）。
+ * 写入一款咖啡豆。
  *
- * CLI 与 MCP 工具共用：返回真实 id / timestamp，调用方不必再从工具文案里抠 ID。
+ * 命令层的唯一写入入口：返回真实 id / timestamp，调用方不必从文案里抠 ID。
  */
 export async function upsertBeanRecord(
   supabase: SupabaseClient,
@@ -174,25 +121,4 @@ export async function upsertBeanRecord(
   }
 
   return { id, timestamp: ts };
-}
-
-/**
- * 执行咖啡豆 upsert 操作（MCP 工具入口）。
- */
-export async function executeUpsertBean(
-  supabase: SupabaseClient,
-  config: BrewGuideConfig,
-  params: { bean: Partial<CoffeeBean> & Record<string, unknown> } | undefined,
-) {
-  if (!isRecord(params) || !isRecord(params.bean)) {
-    return invalidParamsResult('brew_guide_upsert_bean', '{ bean: object }');
-  }
-
-  try {
-    const { id, timestamp } = await upsertBeanRecord(supabase, config, params.bean);
-    return textResult(`Upserted coffee bean ${id} at ${timestamp}.`);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    return textResult(/^Failed to upsert bean:/.test(message) ? message : `Failed to upsert bean: ${message}`);
-  }
 }
