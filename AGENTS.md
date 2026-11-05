@@ -99,6 +99,7 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - Fake rows **must** include `user_id: 'default_user'`, otherwise `eq('user_id')` filters everything out and the test silently passes on empty data.
 - Never call `assertKnownFlags` directly from a test — it calls `process.exit` and kills the runner; test `findUnknownFlags` instead.
 - `tests/helpers/cli.mjs` sets `BREW_GUIDE_NO_UPDATE_CHECK=1` by default so CLI-spawning tests never touch the network; pass `BREW_GUIDE_NO_UPDATE_CHECK: ''` to exercise the notice.
+- Never hardcode the current package version in an assertion — read it from `package.json` and derive from there. A test that treats "0.3.1" as a future version turns into "we are the latest, nothing to notify" the day 0.3.1 ships, and fails only on CI (this happened when 0.3.1 was first released).
 
 ## Secrets and safety
 
