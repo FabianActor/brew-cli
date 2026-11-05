@@ -14,7 +14,9 @@
 
 ---
 
-## [未发布]
+## [0.3.1] - 2026-11-05
+
+这一版只有一个主题：让用户知道自己落后了 —— 之前检测不到更新，等于 0.2.2 之前那些会写坏数据的版本没人会升级。
 
 ### 新增
 
@@ -162,7 +164,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.0...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/FabianActor/brew-cli/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FabianActor/brew-cli/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FabianActor/brew-cli/compare/8133a4a...v0.2.1
