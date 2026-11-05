@@ -14,9 +14,9 @@
 
 ---
 
-## [未发布]
+## [0.3.0] - 2026-11-05
 
-已实现、还没发版（版本号会是 0.3.0）：
+这一版补齐「App 里能做的、CLI 做不了」，并把几处会悄悄写坏数据、或跟 App 抢写的地方堵上。
 
 ### 新增
 
@@ -33,6 +33,7 @@
 - **`--price` 不校验**：以前 `abc` 也照写，App 详情页算「元/克」时出 `NaN`。现在只收数字（最多两位小数），顺手容错 `¥88`、`88元`。
 - **`upsertBeanRecord` 把修好的写入语义又覆盖回去**：这个工具层还留着旧兜底——没烘焙度就写「浅度烘焙」、赏味期硬填 `30/60`、有烘焙日期就把在途改成 `false`。上一版只修了命令层，实测生豆仍被写成 `startDay=30`、在途豆仍被写成已到手。现在这一层只补形状默认值（`beanType`、`beanState`、`isFrozen`），不替用户猜内容。
 - **`c12` 会读当前目录的 `.env`**：以前在别的项目目录里跑，那边恰好有 `BREW_GUIDE_*` / `SUPABASE_*` 的 `.env`，就会悄悄换成另一个库。现在只读配置文件和 shell 里真正导出的环境变量。
+- **命令输出里的 ID 被截成前 8 位**：`note update` 的「Updated note 17938004」、`bean update` / `bean consume` / `method update` 的 dry-run 都是截断的，拿这个 ID 回查或再操作都对不上。现在一律打完整值（列表视图里的 ID 列仍截断，那是显示宽度）。
 
 ### 计划中
 
@@ -146,7 +147,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/FabianActor/brew-cli/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FabianActor/brew-cli/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FabianActor/brew-cli/compare/8133a4a...v0.2.1
 [0.2.0]: https://www.npmjs.com/package/@fabianactor/brew-cli/v/0.2.0
