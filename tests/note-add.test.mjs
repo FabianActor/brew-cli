@@ -64,11 +64,21 @@ test('brew-guide note add --dry-run still succeeds when no credentials exist', (
   assert.equal(result.status, 0);
 });
 
-test('brew-guide note add fails when required arguments are missing', () => {
-  const result = runCliSync(['note', 'add', '--bean-id', 'bean_123']);
+test('brew-guide note add keeps every field optional, like the app form', () => {
+  // App 的冲煮记录允许不选豆子、不选手法（方法这一步可以跳过），所以 CLI 也不该有必填项。
+  const result = runCliSync(['note', 'add', '--dry-run', '--format', 'json']);
 
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /method|required/i);
+  assert.equal(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.note.beanId, undefined);
+  assert.equal(payload.note.method, undefined);
+});
+
+test('brew-guide note add validates --rating even without --method', () => {
+  const result = runCliSync(['note', 'add', '--rating', '9', '--dry-run']);
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /0 到 5/);
 });
 
 const hasSupabase = Boolean(process.env.BREW_GUIDE_SUPABASE_URL);

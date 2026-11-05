@@ -170,9 +170,9 @@ brew-guide note list --from 2026-10-01 --to 2026-10-31 --min-rating 4
 brew-guide bean consume bean_xxx --amount 15
 ```
 
-`--rating` 只收 0-5（超范围直接报错）；`--water-temp` 收 `92` 或 `92°C`，一律写成 `92°C`；`--equipment` 会校验，内置 V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso 直接认，自定义器具要写 `equipment list` 里的 ID。
+`note add` 没有必填项 —— App 里豆子和手法都能不选（方法那一步本身可以跳过），CLI 照此对齐。`--rating` 和 `--taste-*` 只收 0-5（超范围直接报错）；`--water-temp` 收 `92` 或 `92°C`，一律写成 `92°C`；`--equipment` 会校验，内置 V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso 直接认，自定义器具要写 `equipment list` 里的 ID。
 
-给了 `--bean-id` 时，记录里会自动存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 里点「记录一杯」一样；以后豆子改名，旧记录仍显示当时的样子。
+给了 `--bean-id` 时，会先确认豆子还在，记录里再自动存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 里点「记录一杯」一样；以后豆子改名，旧记录仍显示当时的样子。
 
 ### 4. 管器具和配方
 

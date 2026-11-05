@@ -23,6 +23,9 @@
 - **`bean list` / `note list` 命中默认 `--limit 20` 时没有任何提示**：以前 `--country 埃塞俄比亚` 只出 20 条，看起来像总共就 20 条（实际 33 条）。现在命中上限会在 stderr 提示「只显示前 N 条，可能还有更多」——`--format json` 也提示（走 stderr，不污染 stdout 的 JSON）。
 - **Windows 上 `--format json` 被管道/重定向时，中文会破坏 JSON 结构**：控制台用 936(GBK) 解码 CLI 的 UTF-8 输出，多字节字符错位会吃掉后面的引号，于是 `brew-guide bean list --format json | ConvertFrom-Json` 报 `After parsing a value an unexpected character was encountered: r. Path '[0].origin'`。现在 Windows 上输出不是交互终端时，JSON 里的非 ASCII 字符自动转成 `\uXXXX`，任何代码页都能解析；交互终端仍是原样中文。`BREW_GUIDE_JSON_ASCII=0/1` 可强制关闭/开启。
 
+- **`note add` 的 `--bean-id` 和 `--method` 不再是必填**：App 的「记录一杯」里豆子和手法都可以不选（方法那一步本身能跳过），以前少给 `--method` 会先被 citty 拦下滑，连 `--rating 9` 这种参数错误都报不出来。现在两个都可选，只有给了 `--bean-id` 才校验豆子存在并写豆子快照。
+- **`note add` 的 `--taste-*` 和 `--total-time` 越界/非法时静默丢弃**：以前 `--taste-body 7`、`--total-time abc` 都不报错，值直接没写进去（用的人不会知道）。现在越界直接 exit 2。
+
 ### 变更
 
 - **`bean add` 不再强制 `--roaster` / `--origin` / `--process`**：现在只有 `--name` 必填，和 App 的表单一致（它的表单里只有「咖啡豆名称」带必填星号）。以前少给一项就直接 exit 2，比 App 严 —— 一款不知道处理法的豆子根本存不进去。
