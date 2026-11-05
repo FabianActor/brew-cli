@@ -17,3 +17,30 @@ export function printJson(value: unknown): void {
 export function warn(message: string): void {
   console.error(message);
 }
+
+/**
+ * 列表行的人类视图：字段固定为 ` | ` 分隔的若干列。
+ *
+ * 空值一律填占位符，**不能把空字段从数组里过滤掉** —— 一旦漏掉一列，
+ * 后面的值就整体左移，读起来会张冠李戴（比如把 beanId 当成冲煮手法）。
+ */
+export function formatFields(values: unknown[], emptyPlaceholder = '-'): string {
+  return values
+    .map((value) => {
+      if (value === undefined || value === null || value === '') return emptyPlaceholder;
+      return String(value);
+    })
+    .join(' | ');
+}
+
+/** `1 stage` / `3 stages`。 */
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+/** 命中 `--limit` 时提醒还有更多；不冒充「总共就这么多」。 */
+export function warnMaybeMore(shown: number, limit: number): void {
+  if (shown >= limit) {
+    warn(`提示：只显示前 ${limit} 条，可能还有更多。要更多就加 --limit（如 --limit 200）。`);
+  }
+}

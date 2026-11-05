@@ -4,7 +4,7 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { exitForError } from '../../lib/exit.ts';
-import { printJson } from '../../lib/output.ts';
+import { formatFields, plural, printJson } from '../../lib/output.ts';
 import { listMethods } from '../../services/methods.ts';
 
 const argsDef = {
@@ -43,17 +43,18 @@ export default defineCommand({
       for (const m of items) {
         const params = (m.params ?? {}) as Record<string, unknown>;
         const stages = Array.isArray(params.stages) ? params.stages : [];
-        const fields = [
-          String(m.id ?? '').slice(0, 8),
-          m.name,
-          params.coffee || '-',
-          params.water || '-',
-          params.ratio || '-',
-          `${stages.length} stages`,
-        ].filter(Boolean);
-        console.log(fields.join(' | '));
+        console.log(
+          formatFields([
+            m.id,
+            m.name,
+            params.coffee,
+            params.water,
+            params.ratio,
+            plural(stages.length, 'stage'),
+          ]),
+        );
       }
-      console.log(`\n${items.length} methods`);
+      console.log(`\n${plural(items.length, 'method', 'methods')}`);
 
       await logger.success();
     } catch (error) {

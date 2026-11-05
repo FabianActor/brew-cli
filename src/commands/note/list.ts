@@ -4,21 +4,35 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
-import { printJson, warn } from '../../lib/output.ts';
+import { formatFields, printJson, warn, warnMaybeMore } from '../../lib/output.ts';
 import { listSummaries, type JsonbFilter } from '../../lib/query.ts';
+
+/**
+ * 冲煮时间：`data.timestamp` 是 unix ms（App 写的），缺失时退回行上的 `updated_at`。
+ * 输出沿用 ISO 字符串，和以前看起来一样。
+ */
+function brewedAt(record: Record<string, unknown>): string | undefined {
+  const timestamp = record.timestamp;
+  if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+    return new Date(timestamp).toISOString();
+  }
+  const updatedAt = record.updated_at;
+  return typeof updatedAt === 'string' ? updatedAt : undefined;
+}
 
 function printHumanRecords(records: Array<Record<string, unknown>>) {
   for (const record of records) {
-    const fields = [
-      record.id,
-      record.method,
-      record.equipment,
-      record.beanId,
-      record.rating ?? record.score,
-      record.notes ?? record.flavor,
-      record.updated_at,
-    ].filter((value) => value !== undefined && value !== null && value !== '');
-    console.log(fields.join(' | '));
+    console.log(
+      formatFields([
+        record.id,
+        record.method,
+        record.equipment,
+        record.beanId,
+        record.rating ?? record.score,
+        record.notes ?? record.flavor,
+        brewedAt(record),
+      ]),
+    );
   }
 }
 
@@ -136,6 +150,7 @@ export default defineCommand({
       }
 
       printHumanRecords(rows);
+      warnMaybeMore(rows.length, limit);
       await logger.success();
     } catch (error) {
       await logger.error(error);

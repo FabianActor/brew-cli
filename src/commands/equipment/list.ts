@@ -4,7 +4,7 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { exitForError } from '../../lib/exit.ts';
-import { printJson } from '../../lib/output.ts';
+import { formatFields, plural, printJson } from '../../lib/output.ts';
 import { listEquipment } from '../../services/equipment.ts';
 
 const argsDef = {
@@ -40,15 +40,16 @@ export default defineCommand({
         printJson(items);
       } else {
         for (const eq of items) {
-          const fields = [
-            String(eq.id ?? '').slice(0, 8),
-            eq.name,
-            eq.animationType,
-            eq.hasValve ? 'valve' : '',
-          ].filter(Boolean);
-          console.log(fields.join(' | '));
+          console.log(
+            formatFields([
+              eq.id,
+              eq.name,
+              eq.animationType,
+              eq.hasValve ? 'valve' : undefined,
+            ]),
+          );
         }
-        console.log(`\n${items.length} equipment`);
+        console.log(`\n${plural(items.length, 'equipment', 'equipment')}`);
       }
 
       await logger.success();

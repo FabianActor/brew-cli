@@ -243,6 +243,20 @@ brew-guide update-check --format json   # {"current","latest","upgradable","sour
 | 64 | 配置缺失或非法（先跑 `brew-guide init`） |
 | 65 | 网络 / Supabase 请求失败 |
 
+## 常见问题
+
+**中文 Windows 上 `brew-guide ... --format json | ConvertFrom-Json` 报 JSON 解析错误。**
+不是 JSON 坏了，是控制台用 GBK 解码了 UTF-8 输出，中文把引号吃掉了。两种解法任选：
+
+```powershell
+chcp 65001                                  # 只影响当前窗口
+[Console]::OutputEncoding = [Text.Encoding]::UTF8   # 当前会话生效
+```
+
+在意的是「CLI 的输出是 UTF-8」这件事 —— 写文件再用 `Get-Content -Encoding utf8` 读也一样可靠。
+
+**`list` 只出来 20 条。** 默认 `--limit 20`，命中上限时 stderr 会提示；要看更多就 `--limit 200`。
+
 ## 数据模型备注
 
 - 业务字段都在各表的 `data` JSONB 里；`data` 里的时间值是**毫秒数**，不是 ISO 字符串。

@@ -14,6 +14,25 @@
 
 ---
 
+## [未发布]
+
+### 修复
+
+- **`equipment list` / `method list` 的 ID 被截成前 8 位**：以前 `equipment list` 打出 `custom-o`、`method list` 打出 `method-1`（八条一模一样），复制出来根本没法当 `--equipment-id` 用。现在一律打完整 ID —— 列表存在的意义就是能拿去喂给下一条命令。
+- **人类视图的列会错位**：以前空字段被直接从行里删掉，一列缺失后面整体左移（`note list` 里会把 `beanId` 读成冲煮手法、把评分读成备注）。现在空值占位成 `-`，列数固定。
+- **`bean list` / `note list` 命中默认 `--limit 20` 时没有任何提示**：以前 `--country 埃塞俄比亚` 只出 20 条，看起来像总共就 20 条（实际 33 条）。现在命中上限会在 stderr 提示「只显示前 N 条，可能还有更多」。
+
+### 变更
+
+- `note list` 最后一列改用 `data.timestamp`（冲煮时间，毫秒数）换算，缺失时才退回行上的 `updated_at`；以前一律显示 `updated_at`，容器里改过一条记录就看不出来原始冲煮时间了。
+- `method list` 的 `1 stages` 改成 `1 stage`。
+
+### 文档
+
+- README 新增「常见问题」：中文 Windows 上 `--format json | ConvertFrom-Json` 报 JSON 解析错误是控制台用 GBK 解码 UTF-8 输出所致（`chcp 65001` 或 `[Console]::OutputEncoding = [Text.Encoding]::UTF8`），不是 JSON 坏了。
+
+---
+
 ## [0.3.1] - 2026-11-05
 
 这一版只有一个主题：让用户知道自己落后了 —— 之前检测不到更新，等于 0.2.2 之前那些会写坏数据的版本没人会升级。

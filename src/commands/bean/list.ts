@@ -4,22 +4,25 @@ import { resolveConfig } from '../../config.ts';
 import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
-import { printJson, warn } from '../../lib/output.ts';
+import { formatFields, printJson, warn, warnMaybeMore } from '../../lib/output.ts';
 import { listSummaries, type JsonbFilter } from '../../lib/query.ts';
 import { parseGrams } from '../../lib/weights.ts';
 
 function printHumanRecords(records: Array<Record<string, unknown>>) {
   for (const record of records) {
-    const fields = [
-      record.id,
-      record.name,
-      record.roaster,
-      record.region ?? record.origin,
-      record.process,
-      record.remaining !== undefined && record.remaining !== '' ? `${record.remaining}g` : undefined,
-      record.updated_at,
-    ].filter((value) => value !== undefined && value !== null && value !== '');
-    console.log(fields.join(' | '));
+    const remaining =
+      record.remaining !== undefined && record.remaining !== '' ? `${record.remaining}g` : undefined;
+    console.log(
+      formatFields([
+        record.id,
+        record.name,
+        record.roaster,
+        record.region ?? record.origin,
+        record.process,
+        remaining,
+        record.updated_at,
+      ]),
+    );
   }
 }
 
@@ -140,6 +143,7 @@ export default defineCommand({
       }
 
       printHumanRecords(rows);
+      warnMaybeMore(rows.length, limit);
       await logger.success();
     } catch (error) {
       await logger.error(error);
