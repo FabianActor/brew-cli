@@ -18,7 +18,7 @@
 
 ### 变更
 
-- **`init` 问 User ID 时直接回车就是 `default_user`，提示语写明了**：以前只写 `User ID (default_user):`，看起来像要你填点什么。现在提示是 `press Enter for default_user — must match the id the app syncs with`；如果你真的填了别的名字，配置保存后会额外警告一次——App 固定用 `default_user`，两边不一样就是两份互不相通的数据。
+- **`init` 不再问 User ID，固定写 `default_user`**：以前那一步能填任何字符串，填了也不报错，但 App 侧的同步标识是硬编码的（`syncOperations.ts` 的 `DEFAULT_USER_ID`）——填别的名字只是得到一份 App 里根本不存在的数据，而用户不会知道。现在只剩两个问题（URL、API key），配置里写的永远是 `default_user`。如果你之前手工改过配置里的 `brewGuideUserId`，CLI 仍按那个值读写，但每次运行会在 stderr 提醒「App 里看不到」。
 
 ## [0.3.2] - 2026-11-05
 

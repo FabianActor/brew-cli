@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createInterface } from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import { defineCommand } from 'citty';
+import { DEFAULT_USER_ID } from '../config.ts';
 import { createCommandLogger } from '../logger.ts';
 import { getConfigPath } from '../paths.ts';
 
@@ -113,10 +114,10 @@ async function promptForConfig() {
     const supabaseKey = String(
       await prompter.askHidden('API key (publishable / legacy anon; service_role not needed; input hidden): '),
     ).trim();
-    const userInput = String(
-      await prompter.ask('User ID (press Enter for default_user — must match the id the app syncs with): '),
-    ).trim();
-    const brewGuideUserId = userInput || 'default_user';
+    // 不问 User ID：App 那边的用户标识是写死的（brew-guide/src/lib/supabase/syncOperations.ts:190
+    // 的 DEFAULT_USER_ID = 'default_user'），填别的名字只会得到一份 App 看不到的数据。
+    // 真要换，用 BREW_GUIDE_USER_ID 环境变量，别在配置里留第二个值。
+    const brewGuideUserId = DEFAULT_USER_ID;
 
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(
@@ -139,11 +140,6 @@ async function promptForConfig() {
 
     console.log(`配置已保存至 ${configPath}`);
     console.log('提示：roasters 需要库里有 public.get_all_roasters()，缺了会在运行时把建函数的 SQL 打给你。');
-    if (userInput && userInput !== 'default_user') {
-      console.warn(
-        `提示：User ID 填的是 ${userInput}，而 App 固定用 default_user —— 两者不一样时，CLI 读写的是另一份数据，你在 App 里看不到。`,
-      );
-    }
   } catch (error) {
     console.error('Setup cancelled');
     process.exit(130);

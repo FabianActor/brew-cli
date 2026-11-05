@@ -304,3 +304,51 @@ test('resolveConfig prefers supabaseKey over the legacy field and stays quiet', 
     assert.doesNotMatch(stderr.join(''), /旧字段名/);
   });
 });
+
+test('resolveConfig warns when the User ID is not the one the app uses', async (t) => {
+  await withSandbox(t, async ({ configPath }) => {
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_USER_ID;
+
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://user.supabase.co',
+        supabaseKey: 'key',
+        brewGuideUserId: 'someone-else',
+      }),
+      'utf8',
+    );
+
+    const stderr = captureStderr(t);
+    const config = await resolveConfig();
+
+    assert.equal(config.brewGuideUserId, 'someone-else');
+    assert.match(stderr.join(''), /App 里看不到/);
+  });
+});
+
+test('resolveConfig stays quiet when the User ID is the app default', async (t) => {
+  await withSandbox(t, async ({ configPath }) => {
+    delete process.env.BREW_GUIDE_SUPABASE_KEY;
+    delete process.env.BREW_GUIDE_SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.BREW_GUIDE_USER_ID;
+
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        supabaseUrl: 'https://quiet.supabase.co',
+        supabaseKey: 'key',
+        brewGuideUserId: 'default_user',
+      }),
+      'utf8',
+    );
+
+    const stderr = captureStderr(t);
+    const config = await resolveConfig();
+
+    assert.equal(config.brewGuideUserId, 'default_user');
+    assert.doesNotMatch(stderr.join(''), /App 里看不到/);
+  });
+});

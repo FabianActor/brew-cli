@@ -22,6 +22,13 @@ function getConfigError(message: string) {
   return new Error(`${message} Run "brew-guide init" to create a config file.`);
 }
 
+/**
+ * App 侧的同步标识是写死的（brew-guide/src/lib/supabase/syncOperations.ts:190
+ * `export const DEFAULT_USER_ID = 'default_user'`），CLI 想读写同一份数据就只能用这个值。
+ * `BREW_GUIDE_USER_ID` 仍可覆盖，那是给「故意要另一份数据」的场景留的口子。
+ */
+export const DEFAULT_USER_ID = 'default_user';
+
 export async function resolveConfig(): Promise<BrewGuideConfig> {
   const configPath = getConfigPath();
 
@@ -33,7 +40,7 @@ export async function resolveConfig(): Promise<BrewGuideConfig> {
     // 环境变量仍然生效——但只认 shell 里真正导出的那些。
     dotenv: false,
     defaults: {
-      brewGuideUserId: 'default_user',
+      brewGuideUserId: DEFAULT_USER_ID,
     } as BrewGuideConfig,
   });
 
@@ -65,7 +72,16 @@ export async function resolveConfig(): Promise<BrewGuideConfig> {
     );
   }
 
-  const brewGuideUserId = process.env.BREW_GUIDE_USER_ID ?? config.brewGuideUserId ?? 'default_user';
+  const brewGuideUserId = process.env.BREW_GUIDE_USER_ID ?? config.brewGuideUserId ?? DEFAULT_USER_ID;
+
+  // 配置里留着别的 User ID（老配置、或者有人手工改过）时提醒一次：
+  // App 只读 default_user，那份数据在 App 里根本不存在。
+  if (brewGuideUserId !== DEFAULT_USER_ID) {
+    process.stderr.write(
+      `Warning: 当前连接的 User ID 是 ${brewGuideUserId}，不是 App 用的 ${DEFAULT_USER_ID}。` +
+        '按这个标识读写的数据 App 里看不到。要回到 App 的那份数据，改回配置或去掉 BREW_GUIDE_USER_ID。\n',
+    );
+  }
 
   if (!supabaseUrl) {
     throw getConfigError('Missing supabaseUrl.');

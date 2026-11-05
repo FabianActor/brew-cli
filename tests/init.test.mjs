@@ -29,7 +29,7 @@ test('brew-guide init creates a config file with 600 permissions', async (t) => 
   const result = await runInteractiveCli(['init'], {
     cwd: process.cwd(),
     env: sandbox.env,
-    inputLines: ['https://init.supabase.co', 'service-role-key', 'cli-user'],
+    inputLines: ['https://init.supabase.co', 'service-role-key'],
   });
 
   assert.equal(result.code, 0);
@@ -40,7 +40,8 @@ test('brew-guide init creates a config file with 600 permissions', async (t) => 
 
   assert.equal(saved.supabaseUrl, 'https://init.supabase.co');
   assert.equal(saved.supabaseKey, 'service-role-key');
-  assert.equal(saved.brewGuideUserId, 'cli-user');
+  // User ID 不再提问：App 那边写死 default_user，CLI 跟着固定。
+  assert.equal(saved.brewGuideUserId, 'default_user');
   // Windows 没有 POSIX 权限位，chmod 是空操作，只在类 Unix 上断言 0600。
   if (process.platform !== 'win32') {
     assert.equal(stat.mode & 0o777, 0o600);
@@ -82,14 +83,14 @@ test('brew-guide init overwrites an existing config after confirmation', async (
   const result = await runInteractiveCli(['init'], {
     cwd: process.cwd(),
     env: sandbox.env,
-    inputLines: ['y', 'https://new.supabase.co', 'new-key', 'new-user'],
+    inputLines: ['y', 'https://new.supabase.co', 'new-key'],
   });
 
   assert.equal(result.code, 0);
   const saved = JSON.parse(await fs.readFile(sandbox.configPath, 'utf8'));
   assert.equal(saved.supabaseUrl, 'https://new.supabase.co');
   assert.equal(saved.supabaseKey, 'new-key');
-  assert.equal(saved.brewGuideUserId, 'new-user');
+  assert.equal(saved.brewGuideUserId, 'default_user');
 });
 
 test('brew-guide init re-prompts after an invalid URL', async (t) => {
@@ -98,7 +99,7 @@ test('brew-guide init re-prompts after an invalid URL', async (t) => {
   const result = await runInteractiveCli(['init'], {
     cwd: process.cwd(),
     env: sandbox.env,
-    inputLines: ['not-a-url', 'https://valid.supabase.co', 'service-role-key', 'user-id'],
+    inputLines: ['not-a-url', 'https://valid.supabase.co', 'service-role-key'],
   });
 
   assert.equal(result.code, 0);
