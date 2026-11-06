@@ -15,6 +15,7 @@ import {
 } from '../../lib/beanInput.ts';
 import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
+import { readImageAsDataUrl } from '../../lib/imageFile.ts';
 import { updateBean } from '../../services/beans.ts';
 
 /** `--clear` 能清的标量字段：flag 名 → data 里的键名。 */
@@ -27,6 +28,8 @@ const CLEARABLE_SCALARS: Record<string, string> = {
   remaining: 'remaining',
   price: 'price',
   notes: 'notes',
+  image: 'image',
+  'back-image': 'backImage',
 };
 
 /** `--clear` 能清的成分字段：flag 名 → blendComponents 里的键名。 */
@@ -76,10 +79,12 @@ id: { type: 'positional', required: true, description: 'Bean record ID.' },
   'end-day': { type: 'string', description: 'Optimal end day after roast.' },
   'bean-type': { type: 'string', description: '豆种：filter / espresso / omni。' },
   flavor: { type: 'string', description: '风味，逗号分隔，如 "花香,莓果"。' },
+  image: { type: 'string', description: '换正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  'back-image': { type: 'string', description: '换背面图（本地文件），规则同 --image。' },
   clear: {
     type: 'string',
     description:
-      '清空某个字段（可重复），如 --clear price --clear roaster。可清：roaster / roast-level / bean-type / flavor / capacity / remaining / price / notes / origin / country / region / estate / processing-station / process / variety / altitude / batch。',
+      '清空某个字段（可重复），如 --clear price --clear roaster。可清：roaster / roast-level / bean-type / flavor / capacity / remaining / price / notes / image / back-image / origin / country / region / estate / processing-station / process / variety / altitude / batch。',
   },
   'dry-run': { type: 'boolean', description: 'Preview the operation without executing.' },
   format: { type: 'string' },
@@ -129,6 +134,21 @@ export default defineCommand({
     if (price !== undefined) updates.price = parsePrice(price);
     // notes 允许显式清空：--notes "" 视为"清掉备注"，这是唯一合法的空值。
     if (typeof args.notes === 'string') updates.notes = args.notes;
+
+    // 照片和 App 一样存在 data 里：给文件就换成新图，--clear image / --clear back-image 清掉。
+    for (const [argKey, dataKey, flag] of [
+      ['image', 'image', '--image'],
+      ['back-image', 'backImage', '--back-image'],
+    ] as const) {
+      const filePath = args[argKey];
+      if (typeof filePath === 'string' && filePath) {
+        try {
+          updates[dataKey] = readImageAsDataUrl(filePath, flag);
+        } catch (error) {
+          exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
+        }
+      }
+    }
 
     // 在途 / 冷冻：App 的显示状态，互斥。--no-in-transit / --no-frozen 取消。
     Object.assign(updates, resolveTransitFlags(args['in-transit'], args['is-frozen']));

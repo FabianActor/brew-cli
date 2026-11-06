@@ -17,6 +17,7 @@ import { flavorPeriodForRoastLevel, normalizeRoastLevel, BEAN_TYPES } from '../.
 import { resolveFlavorPeriod, type FlavorPeriodSettings } from '../../lib/flavorPeriod.ts';
 import { fetchFlavorPeriodSettings } from '../../services/settings.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
+import { readImageAsDataUrl } from '../../lib/imageFile.ts';
 import { upsertBeanRecord } from '../../tools/upsertBean.ts';
 
 /**
@@ -125,6 +126,20 @@ function buildBeanData(
   if (typeof args.notes === 'string' && args.notes) {
     beanData.notes = args.notes;
   }
+  // 照片直接进 JSONB（App 也是这么存的，`data.image` 就是 data URL）。扩展名不认识、文件太大，在这里拦下。
+  for (const [flag, key, argKey] of [
+    ['--image', 'image', 'image'],
+    ['--back-image', 'backImage', 'back-image'],
+  ] as const) {
+    const filePath = args[argKey];
+    if (typeof filePath === 'string' && filePath) {
+      try {
+        beanData[key] = readImageAsDataUrl(filePath, flag);
+      } catch (error) {
+        exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
+      }
+    }
+  }
 
   beanData.blendComponents = blendComponents;
   if (blendComponents.length === 0) {
@@ -186,6 +201,8 @@ const argsDef = {
   'bean-type': { type: 'string', description: 'filter / espresso / omni，默认 filter。' },
   flavor: { type: 'string' },
   notes: { type: 'string' },
+  image: { type: 'string', description: '正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  'back-image': { type: 'string', description: '背面图（本地文件），规则同 --image。' },
   'start-day': { type: 'string', description: '养豆期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 7 / 中 10 / 深 14）。' },
   'end-day': { type: 'string', description: '赏味期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 60 / 中 60 / 深 90）。' },
   'dry-run': { type: 'boolean' },

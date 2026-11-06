@@ -7,6 +7,7 @@ import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
 import { printJson } from '../../lib/output.ts';
 import { updateNote } from '../../services/notes.ts';
+import { readImageAsDataUrl } from '../../lib/imageFile.ts';
 
 /** 解析 0-5 的评分字段，非法时直接按用法错误退出。 */
 function parseScore(value: unknown, flag: string): number | undefined {
@@ -25,6 +26,7 @@ const argsDef = {
   notes: { type: 'string', description: 'Free-form notes (authoritative; alias of --memo).' },
   equipment: { type: 'string', description: 'Equipment row id.' },
   'total-time': { type: 'string', description: 'Total brew time in seconds.' },
+  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
   source: { type: 'string', description: 'Source tag.' },
   ratio: { type: 'string', description: 'params.ratio.' },
   'grind-size': { type: 'string', description: 'params.grindSize.' },
@@ -62,6 +64,15 @@ export default defineCommand({
     // notes 允许显式清空：--notes "" 就是"清掉备注"，这是唯一合法的空字符串。
     if (typeof args.notes === 'string') updates.notes = args.notes;
     else if (typeof args.memo === 'string') updates.notes = args.memo;
+
+    // 照片：给文件就换成新图（App 的记录也是把 data URL 存在 data.image 里）。
+    if (typeof args.image === 'string' && args.image) {
+      try {
+        updates.image = readImageAsDataUrl(args.image, '--image');
+      } catch (error) {
+        exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
+      }
+    }
 
     if (typeof args['total-time'] === 'string' && args['total-time']) {
       const totalTime = Number.parseFloat(args['total-time']);

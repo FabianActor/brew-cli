@@ -8,6 +8,7 @@ import { assertKnownFlags } from '../../lib/args.ts';
 import { builtinEquipmentHint, findBuiltinEquipment } from '../../lib/equipmentTypes.ts';
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
 import { printJson, warn } from '../../lib/output.ts';
+import { readImageAsDataUrl } from '../../lib/imageFile.ts';
 import { fetchRecordById } from '../../services/base.ts';
 import { getEquipment } from '../../services/equipment.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
@@ -41,6 +42,14 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   }
   if (typeof args.notes === 'string' && args.notes) {
     noteData.notes = args.notes;
+  }
+  // 照片和豆子一样直接进 JSONB（App 的冲煮记录也是这么存的）。
+  if (typeof args.image === 'string' && args.image) {
+    try {
+      noteData.image = readImageAsDataUrl(args.image, '--image');
+    } catch (error) {
+      exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
+    }
   }
   if (typeof args['total-time'] === 'string' && args['total-time']) {
     const n = Number(args['total-time']);
@@ -112,6 +121,7 @@ water: { type: 'string', description: '水量，如 225g（→ params.water）�
   rating: { type: 'string', description: '评分，0-5（超出范围直接报错）。' },
   source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
   notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
+  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
   'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
   'taste-body': { type: 'string', description: 'Taste body 0-5.' },
   'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },
