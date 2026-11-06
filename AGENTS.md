@@ -43,7 +43,7 @@ src/
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts updateCheck.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters settings
   tools/               # upsertBean.ts / upsertNote.ts — the only write paths (record helpers)
-  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile timestamps roast noteInput equipmentTypes updateCheck
+  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile timestamps roast noteInput equipmentTypes updateCheck greenBeans
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
@@ -67,6 +67,7 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - Time values inside `data` are **milliseconds since epoch**, not ISO strings (`timestamp`, `updatedAt`).
 - Origin lives in `data.blendComponents[]`; flat flags (`--origin`, `--region`, …) are merged into the first component and removed from the top level on write.
 - Bean state: `data.beanState` is `roasted` (default) or `green`. Green beans carry `purchaseDate` and have **no** `roastDate`, `roastLevel`, `startDay` or `endDay` — the app swaps 「烘焙日期」for 「购买日期」. `isInTransit` and `isFrozen` are mutually exclusive display states, both default `false`.
+- **Green beans are out of scope for the CLI** (`src/lib/greenBeans.ts`): every green-related entry point rejects with 「暂不支持生豆系列操作，请至 APP 查看并操作。」 — `--bean-state green` / `--purchase-date`, any `bean get/update/delete/consume` whose target is green, `note add --bean-id <green>`, and `bean list` hides them (with a stderr count). The app treats green beans as a workflow (purchase date, inventory, roasting records, `RoastingManager` conversion), so writing fields here produces state the app cannot render. Do not add a green-bean write path without implementing that workflow.
 - Never invent bean content that the caller did not provide: roast level, flavor period (`startDay`/`endDay`) and in-transit used to be filled with guesses in `src/tools/upsertBean.ts`, which silently overrode whatever the command layer decided. Only shape defaults (`beanType`, `beanState`, `isFrozen`) belong there.
 - Flavor period defaults come from the app's own settings: `user_settings.data.appSettings` (`roasterConfigs[].flavorPeriod` → `customFlavorPeriod` → built-in preset). Resolution lives in `src/lib/flavorPeriod.ts` and is read through `src/services/settings.ts`; `user_settings` has no `deleted_at` column, so it does not go through `services/base.ts`.
 - `custom_methods` is **one row per equipment**, not per method: `data.equipmentId` + `data.methods[]`, each method `{ id: 'method-<ms>-<7 chars>', name, params{…}, timestamp }`. Method ids must come from `src/lib/ids.ts` so the equipment ↔ methods join keeps working.

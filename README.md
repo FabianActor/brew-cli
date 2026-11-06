@@ -137,12 +137,9 @@ brew-guide bean add --name "..." --roaster "..." --origin "肯尼亚" --process 
 # 冷冻保存（和在途互斥，开一个就把另一个关掉；取消用 --no-in-transit / --no-frozen）
 brew-guide bean update bean_xxx --is-frozen
 
-# 生豆（记购买日期，没有赏味期和烘焙度）
-brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "日晒" \
-  --bean-state green --purchase-date 2026-10-20
 ```
 
-生豆和熟豆是两套日期语义：生豆记**购买日期**，熟豆记**烘焙日期**，App 不会同时显示两个。所以 `--bean-state green` 和 `--roast-date` 是冲突的，同时给会直接报错；转回熟豆要给 `--roast-date`，否则 App 里那款豆会显示「未设置烘焙日期」。
+**生豆暂不支持**（`--bean-state green`、`--purchase-date` 会被拒绝，报「暂不支持生豆系列操作，请至 APP 查看并操作」）。原因不是偷懒：App 的生豆是一整套流程 —— 记购买日期、按库存算余量、详情页把「冲煮记录」换成「烘焙记录」，「转为生豆」还要新建烘焙记录和一颗新熟豆（`RoastingManager`）。CLI 只改字段的话，会写出 App 里看不见的状态（老记录挂在生豆上但不显示、生豆被标成「在途」）。所以生豆相关的读和写统一交给 App；`bean list` 也会把生豆隐藏起来并提示数量。
 
 `--price` 只收数字（`88`、`88.5`，也认 `¥88`、`88元` 这种写法），存成字符串给 App 算「元/克」。
 

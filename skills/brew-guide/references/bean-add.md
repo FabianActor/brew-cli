@@ -114,7 +114,7 @@ brew-guide roasters --format json
 - `startDay / endDay` 不给时读 App 的赏味期设置（`user_settings.data.appSettings`），优先级同 App（`flavorPeriodUtils.ts:100-140`）：**烘焙商配置 `roasterConfigs[].flavorPeriod` → 全局 `customFlavorPeriod` → 兜底预设**（浅 7/60、中 10/60、深 14/90，烘焙度为空按中烘），每档每个字段各自回落；要改就用 `--start-day` / `--end-day`（给了这两个就不再读设置）。读不到设置时回落预设，并在非 dry-run 下打一行 warning
 - **这组天数只有在有烘焙日期时才生效**：没给 `--roast-date` 的熟豆，App 判到 `roastDate` 为空会返回「未知 / 未设置烘焙日期」（`flavorPeriodUtils.ts:217`），养豆期、赏味期都不计算。要让它开始计天，`--roast-date` 一起给
 - `isInTransit` / `isFrozen` 默认都是 `false`（=已到手、没冷冻）
-- `beanState` 默认 `roasted`；`green`（生豆）要显式传
+- `beanState` 固定 `roasted`（熟豆）；生豆 `green` 一律拒绝，见 §5
 - `price` 只收数字（最多两位小数），存字符串
 
 ## 5. 在途、冷冻与生豆
@@ -123,17 +123,13 @@ brew-guide roasters --format json
 
 **冷冻**：`--is-frozen`。在途和冷冻在 App 里是互斥的两个状态，CLI 开一个会自动关掉另一个；两个同时给会报错。取消用 `--no-in-transit` / `--no-frozen`。
 
-**生豆**：`--bean-state green`（默认 `roasted`）。生豆记的是**购买日期**（`--purchase-date`，不给就填今天），没有烘焙日期、没有赏味期：
+**生豆（暂不支持）**：`--bean-state green`、`--purchase-date` 一律拒绝，返回「暂不支持生豆系列操作，请至 APP 查看并操作」（`src/lib/greenBeans.ts`）。生豆本身、以及指向生豆的操作（`bean get/update/delete/consume`、`note add --bean-id <生豆>`）同样拒绝；`bean list` 不显示生豆，并在 stderr 提示隐藏了几款。
 
-- `--bean-state green` 与 `--roast-date` 冲突，会直接报错
-- 生豆上给 `--roast-level` 会被忽略并提醒
-- 从生豆转熟豆（`bean update <id> --bean-state roasted --roast-date ...`），不给 `--roast-date` 会提醒「App 里会显示未设置烘焙日期」
+理由：App 的生豆不是「一个字段」，而是一整套流程 —— 记购买日期、按库存算余量、详情页把「冲煮记录」换成「烘焙记录」，「转为生豆」要走 `RoastingManager`（新建生豆 + 建烘焙记录 + 新建熟豆）。CLI 只改字段会写出 App 里看不见的状态：老冲煮记录挂在生豆上但生豆详情不展示它、生豆被标成「在途」、列表里分不清生豆和忘了填烘焙日期的熟豆。用户要弄生豆，让他去 App。
 
 ```bash
-# 在途
+# 在途（在途豆仍然是熟豆，可以没有烘焙日期）
 brew-guide bean add --name "..." --roaster "..." --origin "肯尼亚" --process "水洗" --in-transit
-# 生豆
-brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "日晒" --bean-state green
 ```
 
 在途豆示例：
