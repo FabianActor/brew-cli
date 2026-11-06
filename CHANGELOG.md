@@ -16,7 +16,9 @@
 
 ## [未发布]
 
-暂无。
+### 新增
+
+- **`--image` / `--back-image` 可以直接从本地文件加照片**：以前 CLI 完全不能写图片——照片只能靠 App 上传，或者自己拼 base64 直接改库（App 把照片按 `data:image/...;base64,` 存在 JSONB 的 `data.image` / `data.backImage` 里）。现在 `bean add` / `bean update` / `note add` / `note update` 都收这两个参数（`note` 只有 `--image`），`bean update --clear image` 还能清掉。CLI 不做压缩（不装图形库），但会认扩展名（`.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`）、超过 1.5 MB 直接拒绝、超过 400 KB 提醒你先缩图——App 上传时是压到 800px 宽再存的。
 
 ## [0.3.3] - 2026-11-05
 

@@ -146,6 +146,16 @@ brew-guide bean add --name "..." --roaster "..." --origin "巴西" --process "�
 
 `--price` 只收数字（`88`、`88.5`，也认 `¥88`、`88元` 这种写法），存成字符串给 App 算「元/克」。
 
+封面图/背面图可以直接从本地文件塞进去：
+
+```bash
+brew-guide bean add --name "..." --image "D:\photos\cover.jpg" --back-image "D:\photos\back.jpg"
+brew-guide bean update bean_xxx --image "D:\photos\new-cover.jpg"   # 换图
+brew-guide bean update bean_xxx --clear image                        # 清掉
+```
+
+照片和 App 一样存进 `data.image` / `data.backImage`（`data:image/...;base64,` 那种字符串）。CLI 不做压缩，只做两件事：认扩展名（`.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`），以及超过 1.5 MB 直接拒绝（base64 会膨胀 4/3，一行太大既拖慢列表也占库）。想更小就先自己缩到 800px 宽——App 上传时也是这么压的。
+
 拼配用可重复的 `--component`：
 ```bash
 brew-guide bean add --name "三重奏" --roaster "TRIOON" \
@@ -173,7 +183,7 @@ brew-guide bean consume bean_xxx --amount 15
 
 `note add` 没有必填项 —— App 里豆子和手法都能不选（方法那一步本身可以跳过），CLI 照此对齐。`--rating` 和 `--taste-*` 只收 0-5（超范围直接报错）；`--water-temp` 收 `92` 或 `92°C`，一律写成 `92°C`；`--equipment` 会校验，内置 V60 / CleverDripper / Kalita / Origami / Orea / Sinloy / Espresso 直接认，自定义器具要写 `equipment list` 里的 ID。
 
-给了 `--bean-id` 时，会先确认豆子还在，记录里再自动存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 里点「记录一杯」一样；以后豆子改名，旧记录仍显示当时的样子。
+`--image` 可以附一张照片（本地文件，同样存成 data URL）。给了 `--bean-id` 时，会先确认豆子还在，记录里再自动存一份豆子快照（名字、烘焙度、烘焙日期、烘焙商），和 App 里点「记录一杯」一样；以后豆子改名，旧记录仍显示当时的样子。
 
 ### 4. 管器具和配方
 
@@ -231,7 +241,7 @@ brew-guide update-check --format json   # {"current","latest","upgradable","sour
 | --- | --- |
 | `--format json` | 输出紧凑单行 JSON，走 stdout；警告、进度、错误一律走 stderr，可以直接 `| jq`。只认 `json` / `table`，写错直接 exit 2 |
 | `--dry-run` | 写入类命令打印将要发送的载荷，不写库（读取类校验照做；连不上库时只给提示） |
-| `--clear <字段>` | `bean update` 清空某个字段，如 `--clear price --clear flavor`；成分字段（origin/region/…）同样可清。可重复 |
+| `--clear <字段>` | `bean update` 清空某个字段，如 `--clear price --clear flavor`；成分字段（origin/region/…）与 `image` / `back-image` 同样可清。可重复 |
 
 **参数名写错会直接 `exit 2` 并列出可用参数**，不会静默忽略。开关型参数（`--has-remaining` 这类）必须带取值：`--has-remaining true` 是「只看还有余量的」，`false` 是「只看余量为 0 的」，裸写不生效。
 

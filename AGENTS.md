@@ -43,7 +43,7 @@ src/
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts updateCheck.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters settings
   tools/               # upsertBean.ts / upsertNote.ts — the only write paths (record helpers)
-  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images timestamps roast noteInput equipmentTypes updateCheck
+  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile timestamps roast noteInput equipmentTypes updateCheck
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
