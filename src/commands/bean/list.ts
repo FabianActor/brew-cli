@@ -6,6 +6,7 @@ import { assertKnownFlags } from '../../lib/args.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
 import { formatFields, printJson, warn, warnMaybeMore } from '../../lib/output.ts';
 import { listSummaries, type JsonbFilter } from '../../lib/query.ts';
+import { hiddenGreenBeanNotice, isGreenBean } from '../../lib/greenBeans.ts';
 import { parseGrams } from '../../lib/weights.ts';
 
 function printHumanRecords(records: Array<Record<string, unknown>>) {
@@ -113,7 +114,19 @@ export default defineCommand({
       });
     };
 
-    const needsPredicate = hasRemaining !== undefined || componentFilters.length > 0;
+    // 生豆在 CLI 里整体不显示：它没有烘焙日期和赏味期，当熟豆列出来只会让人分不清
+    // 「生豆」和「忘了填烘焙日期的熟豆」。隐藏的数量会如实提示（见 hiddenGreenBeanNotice）。
+    let hiddenGreenBeans = 0;
+    const predicate = (data: Record<string, unknown>) => {
+      if (isGreenBean(data)) {
+        hiddenGreenBeans += 1;
+        return false;
+      }
+      if (!matchesComponents(data)) return false;
+      if (hasRemaining === undefined) return true;
+      const grams = parseGrams(data.remaining);
+      return hasRemaining ? grams > 0 : grams <= 0;
+    };
 
     try {
       const config = await resolveConfig();
@@ -124,19 +137,13 @@ export default defineCommand({
         userId: config.brewGuideUserId,
         limit,
         filters,
-        predicate: needsPredicate
-          ? (data) => {
-              if (!matchesComponents(data)) return false;
-              if (hasRemaining === undefined) return true;
-              const grams = parseGrams(data.remaining);
-              return hasRemaining ? grams > 0 : grams <= 0;
-            }
-          : undefined,
+        predicate,
       });
 
       if (truncated) {
         warn('Warning: scanned a lot of rows without filling --limit; result may be partial.');
       }
+      if (hiddenGreenBeans > 0) warn(hiddenGreenBeanNotice(hiddenGreenBeans));
 
       // 打在 JSON 之前：管道/重定向时 stdout 只有数据，这句走 stderr 不会污染解析。
       warnMaybeMore(rows.length, limit);

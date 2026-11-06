@@ -11,6 +11,7 @@ import { printJson, warn } from '../../lib/output.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
 import { fetchRecordById } from '../../services/base.ts';
 import { getEquipment } from '../../services/equipment.ts';
+import { isGreenBean, rejectGreenBean } from '../../lib/greenBeans.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
 
 function buildNoteData(args: Record<string, string | boolean | undefined>) {
@@ -159,6 +160,10 @@ async function resolveReferences(
   const bean = beanId ? await fetchRecordById(supabase, 'coffee_beans', beanId, config.brewGuideUserId) : null;
   if (beanId && !bean) {
     throw new Error(`bean ${beanId} 不存在（或已删除）。先用 brew-guide bean list 确认 --bean-id。`);
+  }
+  if (bean && isGreenBean(bean.data)) {
+    // 生豆在 CLI 里整体关闭：连带着不给它记冲煮记录（App 的生豆页也不显示冲煮记录）。
+    rejectGreenBean();
   }
   if (bean) {
     // App 的冲煮记录里存了一份豆子快照（page.tsx:211-216）：之后豆子改名或改烘焙度，

@@ -5,7 +5,8 @@ import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags } from '../../lib/args.ts';
 import { EXIT, exitForError, exitWithError } from '../../lib/exit.ts';
 import { printJson, warn } from '../../lib/output.ts';
-import { consumeBean } from '../../services/beans.ts';
+import { consumeBean, getBean } from '../../services/beans.ts';
+import { isGreenBean, rejectGreenBean } from '../../lib/greenBeans.ts';
 import { upsertNoteRecord } from '../../tools/upsertNote.ts';
 
 const argsDef = {
@@ -51,6 +52,9 @@ export default defineCommand({
     try {
       const config = await resolveConfig();
       const supabase = createSupabaseClient(config);
+      // 生豆的余量是库存，不在赏味期模型里；CLI 一律不碰生豆。
+      const existing = await getBean(supabase, args.id, config.brewGuideUserId);
+      if (existing && isGreenBean(existing)) rejectGreenBean();
       const result = await consumeBean(supabase, args.id, amount, config.brewGuideUserId);
 
       if (!result) {

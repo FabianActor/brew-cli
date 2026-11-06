@@ -31,6 +31,11 @@ export interface EntityGetSpec<T> extends EntitySpec {
   /** 人类可读的字段排版。 */
   describe: (record: T) => string[];
   /**
+   * 取到记录之后的拦截钩子：需要按内容拒绝整类记录时用（例如豆子是生豆）。
+   * 抛错/退出由它自己处理，钩子正常返回才继续输出。
+   */
+  guard?: (record: T) => void;
+  /**
    * 记录里放 base64 图片的字段名（豆子是 image/backImage，冲煮记录是 image）。
    * 有了它，`get` 默认把图片换成体积占位，`--with-images` 才输出原图。
    */
@@ -82,6 +87,8 @@ export function createGetCommand<T>(spec: EntityGetSpec<T>) {
           await logger.error(`${spec.label} ${id} not found`);
           exitWithError(`${spec.label} ${id} not found.`, EXIT.FAILURE);
         }
+
+        spec.guard?.(record);
 
         const imageFields = spec.imageFields ?? [];
         const withImages = (args as Record<string, unknown>)['with-images'] === true;

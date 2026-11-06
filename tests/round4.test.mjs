@@ -62,33 +62,12 @@ test('bean add 同时给 --in-transit 和 --is-frozen 直接报错', () => {
   assert.match(result.stderr, /互斥/);
 });
 
-// ── 生豆 ──────────────────────────────────────────────────────────────────
+// ── 生豆（CLI 整体关闭，见 tests/green-beans.test.mjs）────────────────────
 
-test('bean add --bean-state green 记购买日期、不写赏味期', () => {
-  const bean = addJson(['--bean-state', 'green']);
-  assert.equal(bean.beanState, 'green');
-  assert.equal(bean.purchaseDate, todayLocalDate());
-  assert.equal(bean.startDay, undefined);
-  assert.equal(bean.endDay, undefined);
-  assert.equal(bean.roastDate, undefined);
-});
-
-test('bean add 生豆可以指定购买日期', () => {
-  const bean = addJson(['--bean-state', 'green', '--purchase-date', '2026-10-01']);
-  assert.equal(bean.purchaseDate, '2026-10-01');
-});
-
-test('bean add 生豆给烘焙日期是冲突，直接报错', () => {
-  const result = runCliSync([...BASE, '--bean-state', 'green', '--roast-date', '2026-11-01', '--dry-run']);
+test('bean add 拒绝生豆（旧行为：记购买日期、不写赏味期）', () => {
+  const result = runCliSync([...BASE, '--bean-state', 'green', '--dry-run']);
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /生豆没有烘焙日期/);
-});
-
-test('bean add 生豆忽略烘焙度并提醒', () => {
-  const result = runCliSync([...BASE, '--bean-state', 'green', '--roast-level', '浅度', '--dry-run', '--format', 'json']);
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).bean.roastLevel, undefined);
-  assert.match(result.stderr, /不需要烘焙度/);
+  assert.match(result.stderr, /暂不支持生豆系列操作/);
 });
 
 test('bean add 拒绝不认识的 --bean-state', () => {
@@ -135,28 +114,10 @@ test('bean update --is-frozen 同时把在途关掉', () => {
   assert.equal(updates.isInTransit, false);
 });
 
-test('bean update 转生豆会清掉烘焙日期与赏味期', () => {
-  const updates = updateJson(['--bean-state', 'green']);
-  assert.equal(updates.beanState, 'green');
-  assert.equal(updates.roastDate, '');
-  assert.equal(updates.startDay, 0);
-  assert.equal(updates.endDay, 0);
-  assert.equal(updates.purchaseDate, todayLocalDate());
-});
-
-test('bean update 生豆与烘焙日期并存时报错', () => {
-  const result = runCliSync([
-    'bean',
-    'update',
-    'bean_test',
-    '--bean-state',
-    'green',
-    '--roast-date',
-    '2026-11-01',
-    '--dry-run',
-  ]);
+test('bean update 拒绝生豆相关参数（旧行为：转生豆清烘焙日期与赏味期）', () => {
+  const result = runCliSync(['bean', 'update', 'bean_test', '--bean-state', 'green', '--dry-run']);
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /生豆没有烘焙日期/);
+  assert.match(result.stderr, /暂不支持生豆系列操作/);
 });
 
 test('bean update 的 --price 同样校验', () => {

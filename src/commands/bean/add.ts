@@ -18,6 +18,7 @@ import { resolveFlavorPeriod, type FlavorPeriodSettings } from '../../lib/flavor
 import { fetchFlavorPeriodSettings } from '../../services/settings.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
+import { rejectGreenBean } from '../../lib/greenBeans.ts';
 import { upsertBeanRecord } from '../../tools/upsertBean.ts';
 
 /**
@@ -58,22 +59,20 @@ function buildBeanData(
 
   // 烘焙度：给了就照写（顺手把「浅度」补成「浅度烘焙」），没给就留空。
   // 以前没给时会按 bean-type 猜一个（filter→浅度、espresso→中深），猜错就污染 App 的筛选。
+  // 生豆在 CLI 里整体关闭：App 的生豆是一整套流程（购买日期、库存、烘焙记录、转换），
+  // 半套支持只会写出 App 里看不见的状态。见 src/lib/greenBeans.ts 的说明。
   const beanState =
     typeof args['bean-state'] === 'string' && args['bean-state'].trim()
       ? parseBeanState(args['bean-state'])
       : 'roasted';
+  if (beanState === 'green') rejectGreenBean();
 
   let roastLevel: string | undefined;
   if (typeof args['roast-level'] === 'string' && args['roast-level']) {
-    if (beanState === 'green') {
-      // 生豆还没烘，烘焙度没有意义（App 里生豆的 roastLevel 也是空）。
-      warn('Warning: --bean-state green 时不需要烘焙度，--roast-level 已忽略。');
-    } else {
-      const normalized = normalizeRoastLevel(args['roast-level']);
-      if (normalized.warning) warn(normalized.warning);
-      roastLevel = normalized.value;
-      beanData.roastLevel = roastLevel;
-    }
+    const normalized = normalizeRoastLevel(args['roast-level']);
+    if (normalized.warning) warn(normalized.warning);
+    roastLevel = normalized.value;
+    beanData.roastLevel = roastLevel;
   }
 
   // 在途/冷冻：App 的默认值是「已到手、没冷冻」（BeanListItem.tsx:304 读 `bean.isInTransit || false`），
@@ -82,27 +81,13 @@ function buildBeanData(
   beanData.isInTransit = transit.isInTransit ?? false;
   beanData.isFrozen = transit.isFrozen ?? false;
 
-  // 生豆与熟豆是两套日期语义（BasicInfoSection.tsx:92-106）：
-  // 生豆记「购买日期」，熟豆记「烘焙日期」，App 不会同时显示两个。
+  // 熟豆记「烘焙日期」。生豆的「购买日期」在 CLI 里不支持（见 greenBeans.ts）。
   const roastDateArg = typeof args['roast-date'] === 'string' ? args['roast-date'].trim() : '';
-  const purchaseDateArg = typeof args['purchase-date'] === 'string' ? args['purchase-date'].trim() : '';
-  if (beanState === 'green') {
-    if (roastDateArg) {
-      exitWithError(
-        'Error: 生豆没有烘焙日期（--bean-state green 与 --roast-date 冲突）。要记熟豆就去掉 --bean-state green。',
-        EXIT.USAGE,
-      );
-    }
-    beanData.purchaseDate = purchaseDateArg
-      ? parseDateOnly(purchaseDateArg, '--purchase-date')
-      : todayLocalDate();
-  } else {
-    if (purchaseDateArg) {
-      warn('Warning: --purchase-date 是生豆的字段，熟豆上不显示，已忽略。');
-    }
-    if (roastDateArg) {
-      beanData.roastDate = parseDateOnly(roastDateArg, '--roast-date');
-    }
+  if (typeof args['purchase-date'] === 'string' && args['purchase-date'].trim()) {
+    warn('Warning: --purchase-date 是生豆的字段，CLI 暂不支持生豆；熟豆不显示这个字段，已忽略。');
+  }
+  if (roastDateArg) {
+    beanData.roastDate = parseDateOnly(roastDateArg, '--roast-date');
   }
   if (typeof args.price === 'string' && args.price.trim()) {
     beanData.price = parsePrice(args.price);
@@ -148,21 +133,14 @@ function buildBeanData(
     delete beanData.blendComponents;
   }
   beanData.beanState = beanState;
-  if (beanState === 'green') {
-    // 生豆没有赏味期：App 用 roastDate + startDay/endDay 算养豆/赏味阶段，生豆不看这两个值。
-    if (typeof args['start-day'] === 'string' || typeof args['end-day'] === 'string') {
-      warn('Warning: 生豆没有赏味期，--start-day / --end-day 已忽略。');
-    }
-  } else {
-    // 赏味期跟着 App 的用户设置走：烘焙商配置 → 全局自定义 → 兜底预设
-    // （App 的优先级见 flavorPeriodUtils.ts:100-140）。以前固定 30/60，
-    // 浅烘豆在 App 里会被算成「养豆期 30 天」，赏味期整段后移。
-    const period = flavorSettings
-      ? resolveFlavorPeriod(roastLevel, typeof args.roaster === 'string' ? args.roaster : undefined, flavorSettings)
-      : flavorPeriodForRoastLevel(roastLevel);
-    beanData.startDay = parseDayArg(args['start-day'], period.startDay, '--start-day');
-    beanData.endDay = parseDayArg(args['end-day'], period.endDay, '--end-day');
-  }
+  // 赏味期跟着 App 的用户设置走：烘焙商配置 → 全局自定义 → 兜底预设
+  // （App 的优先级见 flavorPeriodUtils.ts:100-140）。以前固定 30/60，
+  // 浅烘豆在 App 里会被算成「养豆期 30 天」，赏味期整段后移。
+  const period = flavorSettings
+    ? resolveFlavorPeriod(roastLevel, typeof args.roaster === 'string' ? args.roaster : undefined, flavorSettings)
+    : flavorPeriodForRoastLevel(roastLevel);
+  beanData.startDay = parseDayArg(args['start-day'], period.startDay, '--start-day');
+  beanData.endDay = parseDayArg(args['end-day'], period.endDay, '--end-day');
 
   if (typeof normalizedCapacity === 'string' && normalizedCapacity) {
     beanData.remaining = normalizedCapacity;
@@ -192,8 +170,8 @@ const argsDef = {
   },
   'roast-level': { type: 'string', description: '烘焙度：极浅烘焙 / 浅度烘焙 / 中浅烘焙 / 中度烘焙 / 中深烘焙 / 深度烘焙（也接受「浅度」这类缩写）。不给就留空，不猜。' },
   'roast-date': { type: 'string', description: '烘焙日期 YYYY-MM-DD（熟豆）。生豆不给这个。' },
-  'bean-state': { type: 'string', description: 'roasted（默认，熟豆）或 green（生豆）。生豆记购买日期、没有赏味期。' },
-  'purchase-date': { type: 'string', description: '购买日期 YYYY-MM-DD（生豆；不给就填今天）。' },
+  'bean-state': { type: 'string', description: 'roasted（默认，熟豆）。生豆（green）暂不支持，请至 App 操作。' },
+  'purchase-date': { type: 'string', description: '生豆字段，CLI 暂不支持（会被拒绝）。' },
   'in-transit': { type: 'boolean', description: '标记为在途（还没到手）。与 --is-frozen 互斥。' },
   'is-frozen': { type: 'boolean', description: '标记为冷冻保存。与 --in-transit 互斥。' },
   price: { type: 'string', description: '整包价格（元），只收数字，如 88 或 88.5。' },
@@ -221,15 +199,20 @@ export default defineCommand({
     const dryRun = args['dry-run'] === true;
     const jsonFormat = args.format === 'json';
 
-    // 赏味期没显式给、又不是生豆时才去读设置：省掉一次请求，也让「给了 --start-day」的人
+    // 生豆一律拒绝，而且拒绝在任何网络请求之前：库里不该因为一次被否的尝试多出东西。
+    if (typeof args['bean-state'] === 'string' && args['bean-state'].trim().toLowerCase() === 'green') {
+      rejectGreenBean();
+    }
+    if (typeof args['purchase-date'] === 'string' && args['purchase-date'].trim()) {
+      // 购买日期是生豆的字段，熟豆上不显示 —— 与其写个看不见的值，不如直接拒绝。
+      rejectGreenBean();
+    }
+
+    // 赏味期没显式给时才去读设置：省掉一次请求，也让「给了 --start-day」的人
     // 不因为读不到设置而被拖慢。
-    const beanStateArg =
-      typeof args['bean-state'] === 'string' && args['bean-state'].trim()
-        ? args['bean-state'].trim().toLowerCase()
-        : 'roasted';
     const periodFlagsGiven = args['start-day'] !== undefined || args['end-day'] !== undefined;
     let flavorSettings: FlavorPeriodSettings | undefined;
-    if (!periodFlagsGiven && beanStateArg !== 'green') {
+    if (!periodFlagsGiven) {
       flavorSettings = await loadFlavorPeriodSettings();
       if (!flavorSettings && !dryRun) {
         warn('Warning: 读不到 App 里的赏味期设置，按兜底预设填写（浅 7/60、中 10/60、深 14/90）。');
