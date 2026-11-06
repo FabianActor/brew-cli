@@ -16,6 +16,12 @@
 
 ## [未发布]
 
+暂无。
+
+## [0.3.5] - 2026-11-06
+
+这一版只做了一件事：把生豆相关的入口全部关掉。上一版还在往里写，而写出来的东西 App 根本渲染不出来。
+
 ### 变更
 
 - **生豆相关的操作全部拒绝**：`--bean-state green` / `--purchase-date` 会被拒绝，指向生豆的 `bean get/update/delete/consume` 与 `note add --bean-id <生豆>` 同样拒绝，统一返回「暂不支持生豆系列操作，请至 APP 查看并操作。」；`bean list` 不显示生豆，并在 stderr 提示隐藏了几款。
@@ -235,7 +241,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.4...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/FabianActor/brew-cli/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FabianActor/brew-cli/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/FabianActor/brew-cli/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FabianActor/brew-cli/compare/v0.3.1...v0.3.2
