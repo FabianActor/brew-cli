@@ -218,5 +218,23 @@ test('equipment add 拒绝 App 不认识的动画类型', () => {
     'aeropress',
   ]);
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /--animation-type must be one of v60, kalita, origami, clever, custom, espresso/);
+  assert.match(result.stderr, /--animation-type must be one of v60, kalita, origami, orea, sinloy, clever, custom, espresso/);
+});
+
+test('equipment add 接受 App 的全部动画类型（含曾经漏掉的 orea / sinloy）', () => {
+  for (const type of ['orea', 'sinloy']) {
+    const result = runCliSync([
+      'equipment',
+      'add',
+      '--name',
+      `测试器具 ${type}`,
+      '--animation-type',
+      type,
+      '--dry-run',
+      '--format',
+      'json',
+    ]);
+    assert.equal(result.status, 0, `${type} 应被接受：${result.stderr}`);
+    assert.equal(JSON.parse(result.stdout).equipment.animationType, type);
+  }
 });

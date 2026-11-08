@@ -1,10 +1,20 @@
 import { EXIT, exitWithError } from './exit.ts';
 
 /**
- * App 认识的器具动画类型（`CustomEquipmentForm.tsx:117-152`，
- * 以及 `PourVisualizer.tsx:164` 对 clever 的特判）。写别的值 App 会退回 V60 动画。
+ * App 认识的器具动画类型：`EquipmentAnimationType`（`brew-guide/src/lib/core/config.ts:94-102`）的
+ * 全集 —— v60 / kalita / origami / orea / sinloy / clever / custom / espresso。
+ * 少写一个值，App 里能建的器具 CLI 就会拒（0.3.5 之前漏了 orea 和 sinloy）。
  */
-export const ANIMATION_TYPES = ['v60', 'kalita', 'origami', 'clever', 'custom', 'espresso'] as const;
+export const ANIMATION_TYPES = [
+  'v60',
+  'kalita',
+  'origami',
+  'orea',
+  'sinloy',
+  'clever',
+  'custom',
+  'espresso',
+] as const;
 
 export type AnimationType = (typeof ANIMATION_TYPES)[number];
 
