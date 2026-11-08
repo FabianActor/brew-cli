@@ -18,6 +18,12 @@
 
 暂无。
 
+## [0.3.6] - 2026-11-08
+
+### 修复
+
+- **`equipment add/update --animation-type` 少了两个取值**：App 的动画类型一共八种（`v60 / kalita / origami / orea / sinloy / clever / custom / espresso`），CLI 只写了六种，把 `orea` 和 `sinloy` 漏了 —— 报错还会说「必须是 v60, kalita, origami, clever, custom, espresso」，看着像 App 只支持这些。现在补齐，App 里能建的器具 CLI 都能建。
+
 ## [0.3.5] - 2026-11-06
 
 这一版只做了一件事：把生豆相关的入口全部关掉。上一版还在往里写，而写出来的东西 App 根本渲染不出来。
@@ -241,7 +247,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.5...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/FabianActor/brew-cli/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/FabianActor/brew-cli/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FabianActor/brew-cli/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/FabianActor/brew-cli/compare/v0.3.2...v0.3.3

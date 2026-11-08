@@ -70,7 +70,7 @@ brew-guide init
 | `equipment update` | 更新 | `brew-guide equipment update <id> --name "..." --note "..." [--animation-type v60] [--has-valve true] [--dry-run]` |
 | `equipment delete` | 软删除 | `brew-guide equipment delete <id> [--dry-run]` |
 
-`--animation-type` 可选：`v60 / kalita / origami / clever / custom / espresso`，默认 `custom`。
+`--animation-type` 可选：`v60 / kalita / origami / orea / sinloy / clever / custom / espresso`（= App 的全部动画类型），默认 `custom`。
 
 `--id` 撞上已有器具时会报错并停下（不会静默覆盖）；确认要替换原器具才加 `--force`。
 
