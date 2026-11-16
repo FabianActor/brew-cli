@@ -17,6 +17,8 @@ description: Use when the user wants to manage coffee beans, brewing notes, equi
 
 > 成分字段全都有 flag：`--origin --country --region --estate --processing-station --altitude --process --variety --batch --percentage`；拼配用可重复的 `--component "origin=…;region=…;process=…;percentage=33"`。详见 `bean-add.md` 拼配说明。
 
+> 图片（`--image` / `--back-image`）按上游 App 的口径卡上限：**豆子图 ≤ 0.3 MB、冲煮记录图 ≤ 0.1 MB**（原始文件大小，对应 App 的 1024px / 1200px 以内）。CLI 不做压缩，超了直接报错，先把图缩小再传或用 App 上传；GIF 例外（App 原样存，CLI 只提醒不拦）。口径来源：上游 `brew-guide` 的 `src/lib/images/imagePolicy.ts`。
+
 ## 渐进式披露（重要）
 
 复杂操作的完整规则放在 `references/` 下。执行前按需读取，不要凭记忆。

@@ -43,7 +43,7 @@ src/
   commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts updateCheck.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters settings
   tools/               # upsertBean.ts / upsertNote.ts — the only write paths (record helpers)
-  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile timestamps roast noteInput equipmentTypes updateCheck greenBeans
+  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile imagePolicy timestamps roast noteInput equipmentTypes updateCheck greenBeans
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
@@ -66,6 +66,8 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - `fetchActiveRecords` pages with `.range()` in 500-row batches; never read a table with a single unbounded `select` (PostgREST caps the response and drops the rest silently).
 - Time values inside `data` are **milliseconds since epoch**, not ISO strings (`timestamp`, `updatedAt`).
 - Origin lives in `data.blendComponents[]`; flat flags (`--origin`, `--region`, …) are merged into the first component and removed from the top level on write.
+
+- Inline photos (`data.image` / `data.backImage`, `brewing_notes.data.image`) are data URLs capped by purpose, mirroring the upstream app's compression targets (`brew-guide/src/lib/images/imagePolicy.ts`): **beans ≤ 0.3 MB, notes ≤ 0.1 MB, roaster logos ≤ 0.12 MB, input files ≤ 50 MB**. `src/lib/imageFile.ts` enforces the cap because the CLI never re-encodes (no image codec dependency); GIFs are exempt because the app stores them raw, so they only warn. `MAX_RECORD_PAYLOAD_BYTES` in `src/lib/images.ts` (3 MB) is a whole-row backstop, not the photo limit.
 - Bean state: `data.beanState` is `roasted` (default) or `green`. Green beans carry `purchaseDate` and have **no** `roastDate`, `roastLevel`, `startDay` or `endDay` — the app swaps 「烘焙日期」for 「购买日期」. `isInTransit` and `isFrozen` are mutually exclusive display states, both default `false`.
 - **Green beans are out of scope for the CLI** (`src/lib/greenBeans.ts`): every green-related entry point rejects with 「暂不支持生豆系列操作，请至 APP 查看并操作。」 — `--bean-state green` / `--purchase-date`, any `bean get/update/delete/consume` whose target is green, `note add --bean-id <green>`, and `bean list` hides them (with a stderr count). The app treats green beans as a workflow (purchase date, inventory, roasting records, `RoastingManager` conversion), so writing fields here produces state the app cannot render. Do not add a green-bean write path without implementing that workflow.
 - Never invent bean content that the caller did not provide: roast level, flavor period (`startDay`/`endDay`) and in-transit used to be filled with guesses in `src/tools/upsertBean.ts`, which silently overrode whatever the command layer decided. Only shape defaults (`beanType`, `beanState`, `isFrozen`) belong there.

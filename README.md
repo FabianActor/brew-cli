@@ -151,7 +151,7 @@ brew-guide bean update bean_xxx --image "D:\photos\new-cover.jpg"   # 换图
 brew-guide bean update bean_xxx --clear image                        # 清掉
 ```
 
-照片和 App 一样存进 `data.image` / `data.backImage`（`data:image/...;base64,` 那种字符串）。CLI 不做压缩，只做两件事：认扩展名（`.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`），以及超过 1.5 MB 直接拒绝（base64 会膨胀 4/3，一行太大既拖慢列表也占库）。想更小就先自己缩到 800px 宽——App 上传时也是这么压的。
+照片和 App 一样存进 `data.image` / `data.backImage`（`data:image/...;base64,` 那种字符串）。CLI 不做压缩（不为此装图形库），所以按 App 压缩后的目标直接卡上限：**豆子图 ≤ 0.3 MB、冲煮记录图 ≤ 0.1 MB**（含 base64 膨胀前的原始文件大小），对应 App 的「1024px / 1200px 以内」。这是上游 `brew-guide` 自己的图片口径（`src/lib/images/imagePolicy.ts`），写进去的图和 App 产生的一样大，App 的存量维护也不会再拿它去补压。超过上限会直接报错并告诉你差多少，先把图缩小再传，或者干脆用 App 上传。GIF 例外——App 对 GIF 是原样存不压缩，CLI 也只提醒不拦。扩展名只认 `.jpg` / `.jpeg` / `.png` / `.webp` / `.gif`（HEIC 请先转成 JPG）。
 
 拼配用可重复的 `--component`：
 ```bash
