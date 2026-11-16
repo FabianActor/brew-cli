@@ -16,6 +16,12 @@
 
 ## [未发布]
 
+暂无。
+
+## [0.3.7] - 2026-11-16
+
+这一版把「写图片」这件事收了个尾：加了烘焙商图标的新命令，并且让图片体积检查真正跟 App 一致 —— 上一版的 `--image` 其实只要图超过 48 KB 就写不进去。
+
 ### 新增
 
 - **`roasters logo`：烘焙商图标可以写入、删除、查看了**。图标存在 App 的 `user_settings` 里（`data.appSettings.roasterConfigs[].logoData`），以前 CLI 完全碰不到，改一次就得直接动手改库。现在 `brew-guide roasters logo --name 良致 --image ./logo.png` 一条命令写完；`--clear` 删除（幂等，本来没图标就不动库）；两个都不给就只看状态，连 `--name` 也不给则列出哪些烘焙商已经配了图标。写入沿用 App 的版本号规则（`logoUpdatedAt = max(now, 旧值 + 1)`，App 靠它判断要不要重新拉图），尺寸口径也和 App 的压缩目标一致：**0.12 MB / 512px**，超了直接拒绝。`--name` 会先跟现有烘焙商名单比对 —— 名字写错不会坏数据，但图标永远不会显示，所以直接报错并列出可选的（`--force` 可跳过）。**旧行为**：`roasters` 只能列名单；现在裸 `roasters` 还是列名单，`roasters list` 是它的显式写法。
@@ -257,7 +263,8 @@ macOS / Linux 上用 `jq`：`brew-guide bean list --limit 200 --format json | jq
 
 ---
 
-[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.6...HEAD
+[未发布]: https://github.com/FabianActor/brew-cli/compare/v0.3.7...HEAD
+[0.3.7]: https://github.com/FabianActor/brew-cli/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/FabianActor/brew-cli/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/FabianActor/brew-cli/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FabianActor/brew-cli/compare/v0.3.3...v0.3.4
