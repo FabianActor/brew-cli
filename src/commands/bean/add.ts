@@ -18,6 +18,7 @@ import { resolveFlavorPeriod, type FlavorPeriodSettings } from '../../lib/flavor
 import { fetchFlavorPeriodSettings } from '../../services/settings.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
+import { BEAN_IMAGE_POLICY } from '../../lib/imagePolicy.ts';
 import { rejectGreenBean } from '../../lib/greenBeans.ts';
 import { upsertBeanRecord } from '../../tools/upsertBean.ts';
 
@@ -119,7 +120,7 @@ function buildBeanData(
     const filePath = args[argKey];
     if (typeof filePath === 'string' && filePath) {
       try {
-        beanData[key] = readImageAsDataUrl(filePath, flag);
+        beanData[key] = readImageAsDataUrl(filePath, { flag, policy: BEAN_IMAGE_POLICY });
       } catch (error) {
         exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
       }

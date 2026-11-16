@@ -11,6 +11,7 @@ import { parseDateOnly, parsePrice, resolveTransitFlags } from '../../lib/beanIn
 import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
+import { BEAN_IMAGE_POLICY } from '../../lib/imagePolicy.ts';
 import { getBean, updateBean } from '../../services/beans.ts';
 import { isGreenBean, rejectGreenBean } from '../../lib/greenBeans.ts';
 
@@ -139,7 +140,7 @@ export default defineCommand({
       const filePath = args[argKey];
       if (typeof filePath === 'string' && filePath) {
         try {
-          updates[dataKey] = readImageAsDataUrl(filePath, flag);
+          updates[dataKey] = readImageAsDataUrl(filePath, { flag, policy: BEAN_IMAGE_POLICY });
         } catch (error) {
           exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
         }

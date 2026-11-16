@@ -46,10 +46,13 @@ export function redactImages(record: Record<string, unknown>, fields: readonly s
 /**
  * 一条记录 `data` 的 JSON 体积上限。
  *
+ * 这**不是**图片上限：图片按用途卡在 `src/lib/imagePolicy.ts`（豆子 0.3 MB / 记录 0.1 MB，
+ * 与上游 brew-guide 压缩后的目标一致）。这里只是整行的兜底 —— 图片上限再加备注、成分和
+ * base64 膨胀，正常记录离 3 MB 还远；真撞上说明有别的东西撑爆了行，这时报出来比等
+ * PostgREST 回 400 强。
+ *
  * 原来是 64 KB —— 那是 MCP 时代给工具返回值留的预算，不是 PostgREST 的限制。
- * 实测（2026-11-16，本项目实例）391 KB / 1.2 MB / 2.5 MB 的 payload 都能写进去；
- * 而 `MAX_IMAGE_BYTES` 允许 1.5 MB 的原图（base64 后约 2 MB），64 KB 等于把 `--image` 锁死。
- * 取 3 MB：比实测通过的最大值再留一截，同时仍然挡住明显的误用。
+ * 实测（2026-11-16，本项目实例）391 KB / 1.2 MB / 2.5 MB 的 payload 都能写进去。
  */
 export const MAX_RECORD_PAYLOAD_BYTES = 3_000_000;
 
@@ -59,7 +62,7 @@ export function assertRecordPayloadFits(dataJson: string, entity: string): void 
   if (bytes <= MAX_RECORD_PAYLOAD_BYTES) return;
 
   throw new Error(
-    `${entity}数据太大（${formatBytes(bytes)}，上限 ${formatBytes(MAX_RECORD_PAYLOAD_BYTES)}）。图片先压到 800px 宽再传，或直接用 App 上传。`,
+    `${entity}数据太大（${formatBytes(bytes)}，上限 ${formatBytes(MAX_RECORD_PAYLOAD_BYTES)}）。检查是不是塞了多张图，或直接用 App 上传。`,
   );
 }
 

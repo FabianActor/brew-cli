@@ -9,6 +9,7 @@ import { builtinEquipmentHint, findBuiltinEquipment } from '../../lib/equipmentT
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
 import { printJson, warn } from '../../lib/output.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
+import { NOTE_IMAGE_POLICY } from '../../lib/imagePolicy.ts';
 import { fetchRecordById } from '../../services/base.ts';
 import { getEquipment } from '../../services/equipment.ts';
 import { isGreenBean, rejectGreenBean } from '../../lib/greenBeans.ts';
@@ -47,7 +48,7 @@ function buildNoteData(args: Record<string, string | boolean | undefined>) {
   // 照片和豆子一样直接进 JSONB（App 的冲煮记录也是这么存的）。
   if (typeof args.image === 'string' && args.image) {
     try {
-      noteData.image = readImageAsDataUrl(args.image, '--image');
+      noteData.image = readImageAsDataUrl(args.image, { flag: '--image', policy: NOTE_IMAGE_POLICY });
     } catch (error) {
       exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
     }

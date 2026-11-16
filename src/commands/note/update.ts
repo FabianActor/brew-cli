@@ -9,6 +9,7 @@ import { redactImages } from '../../lib/images.ts';
 import { printJson } from '../../lib/output.ts';
 import { updateNote } from '../../services/notes.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
+import { NOTE_IMAGE_POLICY } from '../../lib/imagePolicy.ts';
 
 /** 解析 0-5 的评分字段，非法时直接按用法错误退出。 */
 function parseScore(value: unknown, flag: string): number | undefined {
@@ -69,7 +70,7 @@ export default defineCommand({
     // 照片：给文件就换成新图（App 的记录也是把 data URL 存在 data.image 里）。
     if (typeof args.image === 'string' && args.image) {
       try {
-        updates.image = readImageAsDataUrl(args.image, '--image');
+        updates.image = readImageAsDataUrl(args.image, { flag: '--image', policy: NOTE_IMAGE_POLICY });
       } catch (error) {
         exitWithError(`Error: ${error instanceof Error ? error.message : String(error)}`, EXIT.USAGE);
       }
