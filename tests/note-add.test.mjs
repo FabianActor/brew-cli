@@ -127,22 +127,4 @@ test(
   },
 );
 
-test(
-  'brew-guide note add rejects payloads above 64 KB when Supabase credentials are available',
-  { skip: !hasSupabase },
-  () => {
-    const result = runCliSync([
-      'note',
-      'add',
-      '--bean-id',
-      'bean_test',
-      '--method',
-      'V60',
-      '--memo',
-      'x'.repeat(70_000),
-    ]);
 
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /64 KB|limit/i);
-  },
-);

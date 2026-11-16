@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BrewGuideConfig } from '../config.ts';
 import { generateId } from '../lib/ids.ts';
+import { assertRecordPayloadFits } from '../lib/images.ts';
 import { now } from '../lib/timestamps.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,9 +96,7 @@ export async function upsertNoteRecord(
   const id = (note.id as string) || generateId('note');
   const normalized = normalizeNote(note);
   const dataJson = JSON.stringify(normalized);
-  if (dataJson.length > 64_000) {
-    throw new Error('Note data exceeds 64 KB limit. Reduce payload size before retrying.');
-  }
+  assertRecordPayloadFits(dataJson, '记录');
 
   const ts = now();
 

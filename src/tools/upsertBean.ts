@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { BrewGuideConfig } from '../config.ts';
 import { generateId } from '../lib/ids.ts';
+import { assertRecordPayloadFits } from '../lib/images.ts';
 import { now } from '../lib/timestamps.ts';
 import { normalizeWeight } from '../lib/weights.ts';
 import type { CoffeeBean } from '../types/coffeeBean.ts';
@@ -98,9 +99,7 @@ export async function upsertBeanRecord(
   }
 
   const dataJson = JSON.stringify(normalizedBean);
-  if (dataJson.length > 64_000) {
-    throw new Error('Bean data exceeds 64 KB limit. Reduce payload size before retrying.');
-  }
+  assertRecordPayloadFits(dataJson, '豆子');
 
   // deleted_at: null 确保 upsert 同时恢复已软删除的记录
   const { error } = await supabase

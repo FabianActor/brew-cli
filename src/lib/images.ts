@@ -5,6 +5,8 @@
  * 这里只做「找出来 + 换占位」这一件事，字段名由调用方给（豆子是 image/backImage，记录是 image）。
  */
 
+import { formatBytes } from './imageFile.ts';
+
 const DATA_IMAGE_PATTERN = /^data:image\//;
 
 export function isImageDataUrl(value: unknown): value is string {
@@ -39,6 +41,26 @@ export function redactImages(record: Record<string, unknown>, fields: readonly s
   }
 
   return result ?? record;
+}
+
+/**
+ * 一条记录 `data` 的 JSON 体积上限。
+ *
+ * 原来是 64 KB —— 那是 MCP 时代给工具返回值留的预算，不是 PostgREST 的限制。
+ * 实测（2026-11-16，本项目实例）391 KB / 1.2 MB / 2.5 MB 的 payload 都能写进去；
+ * 而 `MAX_IMAGE_BYTES` 允许 1.5 MB 的原图（base64 后约 2 MB），64 KB 等于把 `--image` 锁死。
+ * 取 3 MB：比实测通过的最大值再留一截，同时仍然挡住明显的误用。
+ */
+export const MAX_RECORD_PAYLOAD_BYTES = 3_000_000;
+
+/** 超过上限就抛错，错误里带真实大小 —— 别只说 "exceeds 64 KB"，用户量不出来。 */
+export function assertRecordPayloadFits(dataJson: string, entity: string): void {
+  const bytes = Buffer.byteLength(dataJson, 'utf8');
+  if (bytes <= MAX_RECORD_PAYLOAD_BYTES) return;
+
+  throw new Error(
+    `${entity}数据太大（${formatBytes(bytes)}，上限 ${formatBytes(MAX_RECORD_PAYLOAD_BYTES)}）。图片先压到 800px 宽再传，或直接用 App 上传。`,
+  );
 }
 
 /** 人读视图里的一行体积摘要；没有图片时返回空数组。 */

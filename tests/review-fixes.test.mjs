@@ -78,12 +78,21 @@ test('upsertBeanRecord does not invent roast level or flavor period', async () =
   assert.equal(data.isInTransit, false);
 });
 
-test('upsertBeanRecord rejects data exceeding 64 KB', async () => {
+test('upsertBeanRecord accepts payloads well above the old 64 KB line', async () => {
+  const { supabase, state } = captureUpsert('coffee_beans');
+
+  // `--image` 把照片 base64 塞进 data：一张 250 KB 的封面就是 ~340 KB 的 payload。
+  await upsertBeanRecord(supabase, config, { name: 'big', notes: 'x'.repeat(300_000) });
+
+  assert.equal(state.row.data.notes.length, 300_000);
+});
+
+test('upsertBeanRecord still rejects payloads above the 3 MB guard', async () => {
   const { supabase } = captureUpsert('coffee_beans');
 
   await assert.rejects(
-    () => upsertBeanRecord(supabase, config, { name: 'huge', notes: 'x'.repeat(70_000) }),
-    /exceeds 64 KB limit/,
+    () => upsertBeanRecord(supabase, config, { name: 'huge', notes: 'x'.repeat(3_100_000) }),
+    /豆子数据太大/,
   );
 });
 
@@ -122,11 +131,19 @@ test('upsertNoteRecord normalizes legacy flat fields', async () => {
   assert.equal(state.row.deleted_at, null);
 });
 
-test('upsertNoteRecord rejects data exceeding 64 KB', async () => {
+test('upsertNoteRecord accepts payloads well above the old 64 KB line', async () => {
+  const { supabase, state } = captureUpsert('brewing_notes');
+
+  await upsertNoteRecord(supabase, config, { memo: 'x'.repeat(300_000) });
+
+  assert.equal(state.row.data.notes.length, 300_000);
+});
+
+test('upsertNoteRecord still rejects payloads above the 3 MB guard', async () => {
   const { supabase } = captureUpsert('brewing_notes');
 
   await assert.rejects(
-    () => upsertNoteRecord(supabase, config, { memo: 'x'.repeat(70_000) }),
-    /exceeds 64 KB limit/,
+    () => upsertNoteRecord(supabase, config, { memo: 'x'.repeat(3_100_000) }),
+    /记录数据太大/,
   );
 });
