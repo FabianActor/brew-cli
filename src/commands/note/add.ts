@@ -123,7 +123,7 @@ water: { type: 'string', description: '水量，如 225g（→ params.water）�
   rating: { type: 'string', description: '评分，0-5（超出范围直接报错）。' },
   source: { type: 'string', description: 'Source tag (e.g. quick-decrement, capacity-adjustment).' },
   notes: { type: 'string', description: 'Free-form notes (authoritative; prefer over --memo).' },
-  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 0.1 MB、1200px（App 口径，CLI 不压缩）。' },
   'total-time': { type: 'string', description: 'Total brew time in seconds (authoritative; prefer over --brew-time).' },
   'taste-body': { type: 'string', description: 'Taste body 0-5.' },
   'taste-acidity': { type: 'string', description: 'Taste acidity 0-5.' },

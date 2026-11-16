@@ -13,11 +13,16 @@ export function isImageDataUrl(value: unknown): value is string {
   return typeof value === 'string' && DATA_IMAGE_PATTERN.test(value);
 }
 
-/** 人看的体积，用来告诉用户被省掉的东西有多大。只算 base64 载荷，不含 `data:image/png;base64,` 前缀。 */
-export function describeImageSize(value: string): string {
+/** data URL 里 base64 载荷对应的字节数（不含 `data:image/png;base64,` 前缀）。 */
+export function imageDataUrlBytes(value: string): number {
   const comma = value.indexOf(',');
   const payload = comma >= 0 ? value.slice(comma + 1) : value;
-  const bytes = Math.round((payload.length * 3) / 4);
+  return Math.round((payload.length * 3) / 4);
+}
+
+/** 人看的体积，用来告诉用户被省掉的东西有多大。只算 base64 载荷，不含 `data:image/png;base64,` 前缀。 */
+export function describeImageSize(value: string): string {
+  const bytes = imageDataUrlBytes(value);
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

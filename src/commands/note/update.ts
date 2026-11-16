@@ -28,7 +28,7 @@ const argsDef = {
   notes: { type: 'string', description: 'Free-form notes (authoritative; alias of --memo).' },
   equipment: { type: 'string', description: 'Equipment row id.' },
   'total-time': { type: 'string', description: 'Total brew time in seconds.' },
-  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  image: { type: 'string', description: '照片（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 0.1 MB、1200px（App 口径，CLI 不压缩）。' },
   source: { type: 'string', description: 'Source tag.' },
   ratio: { type: 'string', description: 'params.ratio.' },
   'grind-size': { type: 'string', description: 'params.grindSize.' },

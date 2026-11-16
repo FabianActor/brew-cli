@@ -29,7 +29,7 @@ export function exitForError(error: unknown): never {
   if (/Missing|Config error/i.test(message)) {
     exitWithError(`Error: Config ${message}`, EXIT.CONFIG);
   }
-  if (/^Failed to (list|fetch|delete|upsert) /i.test(message)) {
+  if (/^Failed to (list|fetch|delete|upsert|update) /i.test(message)) {
     exitWithError(`Error: Network ${message}`, EXIT.NETWORK);
   }
   exitWithError(`Error: ${message}`, EXIT.FAILURE);

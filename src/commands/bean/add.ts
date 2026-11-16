@@ -180,7 +180,7 @@ const argsDef = {
   'bean-type': { type: 'string', description: 'filter / espresso / omni，默认 filter。' },
   flavor: { type: 'string' },
   notes: { type: 'string' },
-  image: { type: 'string', description: '正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  image: { type: 'string', description: '正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 0.3 MB、1024px（App 口径，CLI 不压缩）。' },
   'back-image': { type: 'string', description: '背面图（本地文件），规则同 --image。' },
   'start-day': { type: 'string', description: '养豆期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 7 / 中 10 / 深 14）。' },
   'end-day': { type: 'string', description: '赏味期结束的天数；默认取 App 里的赏味期设置（烘焙商配置 → 全局自定义 → 预设浅 60 / 中 60 / 深 90）。' },

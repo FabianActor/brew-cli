@@ -76,7 +76,7 @@ id: { type: 'positional', required: true, description: 'Bean record ID.' },
   'end-day': { type: 'string', description: 'Optimal end day after roast.' },
   'bean-type': { type: 'string', description: '豆种：filter / espresso / omni。' },
   flavor: { type: 'string', description: '风味，逗号分隔，如 "花香,莓果"。' },
-  image: { type: 'string', description: '换正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 1.5 MB。' },
+  image: { type: 'string', description: '换正面图（本地文件），存成 data URL；支持 .jpg / .jpeg / .png / .webp / .gif，上限 0.3 MB、1024px（App 口径，CLI 不压缩）。' },
   'back-image': { type: 'string', description: '换背面图（本地文件），规则同 --image。' },
   clear: {
     type: 'string',
