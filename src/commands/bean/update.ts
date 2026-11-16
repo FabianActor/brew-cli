@@ -6,6 +6,7 @@ import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { buildBlendComponents, componentFromFlags } from '../../lib/blendComponents.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { printJson, warn } from '../../lib/output.ts';
+import { redactImages } from '../../lib/images.ts';
 import { parseDateOnly, parsePrice, resolveTransitFlags } from '../../lib/beanInput.ts';
 import { BEAN_TYPES, normalizeRoastLevel } from '../../lib/roast.ts';
 import { normalizeWeight } from '../../lib/weights.ts';
@@ -260,7 +261,8 @@ export default defineCommand({
       }
 
       if (args.format === 'json') {
-        printJson(result);
+        // 和 `bean get` 一样把内嵌图片换成占位：不然一行 JSON 会把整段 base64 刷到屏幕上。
+        printJson(redactImages(result as Record<string, unknown>, ['image', 'backImage']));
       } else {
         console.log(`Updated bean: ${result.name ?? args.id}`);
       }

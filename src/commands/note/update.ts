@@ -5,6 +5,7 @@ import { createCommandLogger } from '../../logger.ts';
 import { assertKnownFlags, nonEmptyString } from '../../lib/args.ts';
 import { EXIT, exitWithError } from '../../lib/exit.ts';
 import { parseRating, parseTemperature } from '../../lib/noteInput.ts';
+import { redactImages } from '../../lib/images.ts';
 import { printJson } from '../../lib/output.ts';
 import { updateNote } from '../../services/notes.ts';
 import { readImageAsDataUrl } from '../../lib/imageFile.ts';
@@ -131,7 +132,8 @@ export default defineCommand({
       }
 
       if (args.format === 'json') {
-        printJson(result);
+        // 和 `note get` 一样把内嵌图片换成占位，别把整段 base64 刷到屏幕上。
+        printJson(redactImages(result as Record<string, unknown>, ['image']));
       } else {
         console.log(`Updated note ${args.id}`);
       }
