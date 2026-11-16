@@ -40,10 +40,10 @@ src/
   client.ts            # Supabase client factory
   config.ts            # c12 config loader; ~/.config/brew-guide/config.json
   logger.ts paths.ts
-  commands/            # bean/ equipment/ method/ note/ + init.ts roasters.ts backup.ts updateCheck.ts
+  commands/            # bean/ equipment/ method/ note/ roasters/ + init.ts backup.ts updateCheck.ts
   services/            # Supabase data access: base tables beans notes equipment methods roasters settings
   tools/               # upsertBean.ts / upsertNote.ts — the only write paths (record helpers)
-  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile imagePolicy timestamps roast noteInput equipmentTypes updateCheck greenBeans
+  lib/                 # args exit output query summary weights ids blendComponents beanInput flavorPeriod crudCommands images imageFile imagePolicy timestamps roast noteInput equipmentTypes updateCheck greenBeans roasterLogo
   types/
 tests/                 # *.test.mjs, node --test
 skills/brew-guide/     # SKILL.md + references/ (agent-facing usage docs)
@@ -72,6 +72,7 @@ If a task touches Supabase access, schema assumptions, RPCs, RLS, SQL, or `@supa
 - **Green beans are out of scope for the CLI** (`src/lib/greenBeans.ts`): every green-related entry point rejects with 「暂不支持生豆系列操作，请至 APP 查看并操作。」 — `--bean-state green` / `--purchase-date`, any `bean get/update/delete/consume` whose target is green, `note add --bean-id <green>`, and `bean list` hides them (with a stderr count). The app treats green beans as a workflow (purchase date, inventory, roasting records, `RoastingManager` conversion), so writing fields here produces state the app cannot render. Do not add a green-bean write path without implementing that workflow.
 - Never invent bean content that the caller did not provide: roast level, flavor period (`startDay`/`endDay`) and in-transit used to be filled with guesses in `src/tools/upsertBean.ts`, which silently overrode whatever the command layer decided. Only shape defaults (`beanType`, `beanState`, `isFrozen`) belong there.
 - Flavor period defaults come from the app's own settings: `user_settings.data.appSettings` (`roasterConfigs[].flavorPeriod` → `customFlavorPeriod` → built-in preset). Resolution lives in `src/lib/flavorPeriod.ts` and is read through `src/services/settings.ts`; `user_settings` has no `deleted_at` column, so it does not go through `services/base.ts`.
+- Roaster logos also live in `user_settings.data.appSettings.roasterConfigs[]` (one entry per roaster: `{ roasterName, logoData?, logoUpdatedAt?, flavorPeriod?, updatedAt }`). `roasters logo` writes them through `fetchSettingsRow` + `updateSettingsData` (whole-row compare-and-swap, same `updated_at` guard as the tables) and must copy the app's versioning rule from `brew-guide/src/lib/stores/settingsStore.ts:544-578`: `logoUpdatedAt = Math.max(now, old + 1)`, `updatedAt = now`, and clearing deletes the key instead of blanking it — the app uses `logoUpdatedAt` to decide whether to re-fetch.
 - `custom_methods` is **one row per equipment**, not per method: `data.equipmentId` + `data.methods[]`, each method `{ id: 'method-<ms>-<7 chars>', name, params{…}, timestamp }`. Method ids must come from `src/lib/ids.ts` so the equipment ↔ methods join keeps working.
 - `roasters` depends on the Postgres RPC `public.get_all_roasters()`. That function is **not** in brew-guide's schema; any fresh Supabase project needs the DDL from README.
 

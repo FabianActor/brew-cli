@@ -16,6 +16,10 @@
 
 ## [未发布]
 
+### 新增
+
+- **`roasters logo`：烘焙商图标可以写入、删除、查看了**。图标存在 App 的 `user_settings` 里（`data.appSettings.roasterConfigs[].logoData`），以前 CLI 完全碰不到，改一次就得直接动手改库。现在 `brew-guide roasters logo --name 良致 --image ./logo.png` 一条命令写完；`--clear` 删除（幂等，本来没图标就不动库）；两个都不给就只看状态，连 `--name` 也不给则列出哪些烘焙商已经配了图标。写入沿用 App 的版本号规则（`logoUpdatedAt = max(now, 旧值 + 1)`，App 靠它判断要不要重新拉图），尺寸口径也和 App 的压缩目标一致：**0.12 MB / 512px**，超了直接拒绝。`--name` 会先跟现有烘焙商名单比对 —— 名字写错不会坏数据，但图标永远不会显示，所以直接报错并列出可选的（`--force` 可跳过）。**旧行为**：`roasters` 只能列名单；现在裸 `roasters` 还是列名单，`roasters list` 是它的显式写法。
+
 ### 修复
 
 - **`--image` / `--back-image` 对正常大小的照片其实一直写不进去**：0.3.4 加这个参数时，写入前的体积检查还是 MCP 时代留下的 64 KB，而 base64 会把文件撑大 4/3 —— 一张 250 KB 的封面就是约 340 KB 的 payload，当场报 `Bean data exceeds 64 KB limit`。也就是说这个功能只对 48 KB 以下的小图有效，正常手机拍的、店里给的图全部被挡。现在这一层的 64 KB 已经去掉（换成按用途卡图片体积，见下方「变更」，整行 3 MB 只是兜底），报错也会带真实体积。旧行为后果：没有数据被写坏，只是加不进去；如果你之前用 `--image` 失败过，现在重试即可。

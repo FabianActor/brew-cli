@@ -109,7 +109,15 @@ brew-guide bean get bean_xxx --with-images --format json > bean.json
 
 # 还剩什么烘焙商
 brew-guide roasters
+
+# 烘焙商图标（存在 App 的 user_settings 里，写进去 App 刷新就能看到）
+brew-guide roasters logo                              # 哪些烘焙商已经有图标
+brew-guide roasters logo --name 良致                   # 看这一家的图标
+brew-guide roasters logo --name 良致 --image ./logo.png
+brew-guide roasters logo --name 良致 --clear
 ```
+
+图标和照片一样卡 App 的压缩口径（**0.12 MB / 512px**，CLI 不压缩），名字要和豆子里的 `roaster` 完全一致 —— 对不上会直接报错并列出库里已有的烘焙商（写错名字不会坏数据，但图标永远不会出现）；确实要先建再加 `--force`。
 
 ### 2. 加一款豆
 
@@ -225,7 +233,8 @@ brew-guide update-check --format json   # {"current","latest","upgradable","sour
 | `note list` | 列表，支持器具、方法、豆子、评分、日期区间筛选 |
 | `equipment add / get / update / delete / list` | 器具 |
 | `method add / get / update / delete / list` | 冲煮配方（`--stages-json` 传分段注水步骤） |
-| `roasters` | 库里出现过的烘焙商 |
+| `roasters` | 库里出现过的烘焙商（`roasters list` 等价） |
+| `roasters logo` | 烘焙商图标：列出、查看、写入、删除（存 App 的 `user_settings`） |
 | `backup` | 整库导出成 JSON |
 | `update-check` | 查 npm 上有没有新版本 |
 | `init` | 写配置 |

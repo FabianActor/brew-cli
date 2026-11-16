@@ -86,13 +86,19 @@ brew-guide init
 | `method update` | 更新名称/参数 | `brew-guide method update <id> [--name "..."] [--coffee "15g"] [--water "225g"] [--ratio "1:15"] [--grind-size "..."] [--temp "92°C"] [--dry-run]` |
 | `method delete` | **硬删除** | `brew-guide method delete <id> [--dry-run]` |
 
-### roasters — 查烘焙商
+### roasters — 查烘焙商 / 管图标
 
 ```bash
-brew-guide roasters [--format json]
+brew-guide roasters [--format json]              # 等价于 roasters list
+brew-guide roasters logo                         # 列已有图标的烘焙商
+brew-guide roasters logo --name 良致              # 看这一家（有图标会报体积和更新时间）
+brew-guide roasters logo --name 良致 --image ./logo.png
+brew-guide roasters logo --name 良致 --clear      # 幂等：本来没图标就不写库
 ```
 
 依赖库里的 `public.get_all_roasters()` 函数。项目里没建时命令会 **exit 1 并把建函数的 SQL 打到 stderr**，直接照抄进 Supabase SQL Editor 即可，不需要猜。
+
+图标存在 `user_settings.data.appSettings.roasterConfigs[]`，写的时候沿用 App 的规则（`logoUpdatedAt = max(now, 旧值+1)` 当版本号）。上限跟 App 的压缩目标一致：**0.12 MB / 512px**，CLI 不压缩，超了直接报错。`--name` 会先跟现有烘焙商名单对一遍（写错名字图标永远不会显示），`--force` 可跳过；`--dry-run` 只读文件不联网。
 
 ### backup — 整库备份
 
