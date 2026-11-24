@@ -9,6 +9,7 @@ import noteCommand from './commands/note/index.ts';
 import roastersCommand from './commands/roasters/index.ts';
 import updateCheckCommand from './commands/updateCheck.ts';
 import { assertValidFormat } from './lib/output.ts';
+import { normalizeArgv } from './lib/argv.ts';
 import { maybeNotifyUpdate, startBackgroundUpdateCheck } from './lib/updateCheck.ts';
 
 const main = defineCommand({
@@ -47,17 +48,6 @@ function shouldCheckForUpdates(argv: string[]): boolean {
  *
  * `--help` 例外：让它显示父命令的帮助，否则看不到 `logo` 这个子命令。
  */
-export function normalizeArgv(argv: string[]): string[] {
-  if (argv[0] !== 'roasters') return argv;
-
-  const rest = argv.slice(1);
-  if (rest.some((arg) => arg === '--help' || arg === '-h')) return argv;
-  // 已经有位置参数（`list` / `logo`）就按原样走。
-  if (rest.some((arg) => !arg.startsWith('-'))) return argv;
-
-  return ['roasters', 'list', ...rest];
-}
-
 async function bootstrap(): Promise<void> {
   const argv = normalizeArgv(process.argv.slice(2));
   // 写错的 --format 会在任何命令里静默退回人类视图，这里统一拦下。
