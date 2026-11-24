@@ -16,7 +16,9 @@
 
 ## [未发布]
 
-暂无。
+### 修复
+
+- **`brew-guide roasters --format json` 不再报 `Unknown command json`**。0.3.7 把 `roasters` 拆成命令组之后，只有「后面全是 flag」时才会补上 `list`，于是 `--format json` 里的 `json` 被当成子命令名，退出码 1。现在只要第一个词是 flag 就补 `list`；真的是子命令拼错（`roasters bogus`）仍然报 `Unknown command`，不会被吞掉。**旧行为**：`roasters` 和 `roasters list` 都能用，但带取值的 flag（`--format json`）会让它退化成 `Unknown command json`。裸 `roasters`、`roasters list` 的行为没变。
 
 ## [0.3.7] - 2026-11-16
 
